@@ -1,0 +1,33 @@
+[build-system]
+requires        = ["setuptools>=61.0", "wheel"]
+build-backend   = "setuptools.build_meta"
+
+[project]
+name            = "qb-gui-api"
+version         = "0.0.1"
+description     = "A Python API for interacting with QuickBooks Enterprise Desktop "
+authors         = [{ name = "Derek Banker", email = "dbb2002@gmail.com" }]
+readme          = "README.md"
+license         = "Apache-2.0"
+license-files   = ["LICENSE"]   
+requires-python = ">=3.8"
+keywords        = ["quickbooks","quickbooks desktop","quickbooks enterprise", "invoice", "reports"]
+classifiers     = ["Programming Language :: Python :: 3",
+                   "OS :: Windows"
+                  ]
+dependencies    = ["psutil >= 7.0.0",
+                   "toml_init >= 0.1.1",
+                   "rapidfuzz >= 3.13.0"
+                  ]
+
+# [project.optional-dependencies]
+# dev = [""]
+
+[project.scripts]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["quickbooks_gui_api*"]

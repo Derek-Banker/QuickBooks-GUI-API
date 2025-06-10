@@ -1,0 +1,14 @@
+QuickBooks-Invoice-Saver/
+├── pyproject.toml
+├── README.md
+├── LICENSE
+├── src/
+│   └── invoice_saver/
+│       ├── __init__.py
+│       ├── quickbooks_invoice_saver.py
+│       └── tools/
+│           ├── process_manager.py
+│           └── window_manager.py
+└── tests/
+    ├── test_process_manager.py
+    └── test_window_manager.py
