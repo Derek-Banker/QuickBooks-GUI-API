@@ -23,6 +23,9 @@ class ProcessManager:
 
         :returns: The success status.  
         :rtype: bool
+
+
+    
         """
         if not name and not path:
             self.logger.debug("No name or location provided to is_running()")

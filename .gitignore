@@ -161,3 +161,4 @@ cython_debug/
 OoO.rb
 old.py
 /tests
+*.png
