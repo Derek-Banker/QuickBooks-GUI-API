@@ -6,6 +6,27 @@ import mss
 import easyocr
 import pytesseract
 from PIL import Image
+import logging
+
+
+class OCRManager:
+    """
+    Uses `pytesseract` to for OCR functionality. Used to Verify on scree information.
+    Attributes:
+        logger (logging.Logger): Logger instance for logging operations.
+    """
+
+    def __init__(self,
+                 logger: logging.Logger | None = None
+                 ) -> None:
+        if logger is None:
+            self.logger = logging.getLogger(__name__)
+        else:
+            if isinstance(logger, logging.Logger):
+                self.logger = logger 
+            else:
+                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+        
 
 def screenshot_crop_to_color(region, target_color, tolerance=10, screenshot_path='screenshot.png', cropped_path='cropped.png'):
     with mss.mss() as sct:

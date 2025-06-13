@@ -6,14 +6,24 @@ from rapidfuzz import fuzz
 import logging
 
 class WindowManager:
+    """
+    Manages windows in Windows. 
+    Attributes:
+        logger (logging.Logger): Logger instance for logging operations.
+    """
 
-    def __init__(self, logger = None) -> None:
+
+    def __init__(self, 
+                 logger: logging.Logger | None  = None
+                 ) -> None:
 
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
-            self.logger = logger
-
+            if isinstance(logger, logging.Logger):
+                self.logger = logger 
+            else:
+                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
     def best_string_match(self, options: List[str], target: str, match_threshold: float = 100, return_on_match: bool = False) -> Dict[str,float] | None:
         max_result: float = 0.0

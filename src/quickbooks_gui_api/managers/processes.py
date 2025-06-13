@@ -3,12 +3,23 @@ from pathlib import Path
 import psutil
 
 class ProcessManager:
+    """
+    Manages Windows processes. Can start, stop, and detect.
+    Attributes:
+        logger (logging.Logger): Logger instance for logging operations.
+    """
 
-    def __init__(self, logger: logging.Logger | None = None) -> None:
+    def __init__(self, 
+                 logger: logging.Logger | None = None
+                 ) -> None:
+        
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
-            self.logger = logger
+            if isinstance(logger, logging.Logger):
+                self.logger = logger 
+            else:
+                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
     def is_running(self, *,
                    name: str | None = None,
