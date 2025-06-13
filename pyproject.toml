@@ -10,7 +10,7 @@ authors         = [{ name = "Derek Banker", email = "dbb2002@gmail.com" }]
 readme          = "README.md"
 license         = "Apache-2.0"
 license-files   = ["LICENSE"]   
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords        = ["quickbooks","quickbooks desktop","quickbooks enterprise", "invoice", "reports"]
 classifiers     = ["Programming Language :: Python :: 3",
                    "OS :: Windows"

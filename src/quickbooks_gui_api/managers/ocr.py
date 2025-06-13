@@ -67,21 +67,21 @@ def crop_blank_borders(image_path, cleaned_image_path='cleaned.png'):
 
     return cleaned_image_path
 
-# Example usage
-time.sleep(3)
-region = (1920, 0, 1920, 1080)  # x, y, width, height
-color_to_crop = (78, 158, 25)  # RGB for green 
+# # Example usage
+# time.sleep(3)
+# region = (1920, 0, 1920, 1080)  # x, y, width, height
+# color_to_crop = (78, 158, 25)  # RGB for green 
 
-original, cropped = screenshot_crop_to_color(region, color_to_crop)
-cleaned = crop_blank_borders(cropped)
+# original, cropped = screenshot_crop_to_color(region, color_to_crop)
+# cleaned = crop_blank_borders(cropped)
 
-# print(f"Original screenshot saved as {original}")
-# print(f"Cropped image saved as {cropped}")
-# print(f"Cleaned image saved as {cleaned}")
+# # print(f"Original screenshot saved as {original}")
+# # print(f"Cropped image saved as {cropped}")
+# # print(f"Cleaned image saved as {cleaned}")
 
-img = Image.open(cleaned)
-text = pytesseract.image_to_string(img, config='--psm 6')
-print(f"pytesseract: '{text}'")
+# img = Image.open(cleaned)
+# text = pytesseract.image_to_string(img, config='--psm 6')
+# print(f"pytesseract: '{text}'")
 
 # reader = easyocr.Reader(['en'])
 # result = reader.readtext(cleaned)

@@ -1,0 +1,20 @@
+# defaults/app_defaults.toml
+
+[__meta__]
+name = "defaults_qb-gui-api"
+version = "0.1.0"
+
+# [QuickBooks.Invoices.Saver]
+# SHOW_TOASTS = true
+# WINDOW_LOAD_DELAY  = { defaultValue = 0.5,  type = "float", min = 0.0 }
+# NAVIGATION_DELAY   = { defaultValue = 0.15, type = "float", min = 0.0 }
+
+# [MyApp.Logging]
+# LEVEL       = { defaultValue = "INFO", type = "str", allowedValues = ["DEBUG","INFO","WARN","ERROR"] }
+# ENABLE_LOGS = { defaultValue = true,   type = "bool" }
+
+[secrets]
+SALT        = { defaultValue = "UNINITIALIZED", type = "str" }
+HASH        = { defaultValue = "UNINITIALIZED", type = "str" }
+USERNAME    = { defaultValue = "UNINITIALIZED", type = "str" }
+PASSWORD    = { defaultValue = "UNINITIALIZED", type = "str" }

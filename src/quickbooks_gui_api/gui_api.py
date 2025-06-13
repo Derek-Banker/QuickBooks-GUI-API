@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typing import List, Dict, Any, overload
 
-from managers import ImageManager, OCRManager, ProcessManager, WindowManager
+from src.quickbooks_gui_api.managers import ImageManager, OCRManager, ProcessManager, WindowManager
 
 
 
@@ -20,12 +20,12 @@ class QuickBookGUIAPI:
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
-    def startup(self,
-                username: str,
-                password: str,
-                exe_path: Path,
-                version: str
-               ) -> bool:
+    # def startup(self,
+    #             username: str,
+    #             password: str,
+    #             exe_path: Path,
+    #             version: str
+    #            ) -> bool:
         
 
-    def kill_additional(self)
+    # def kill_additional(self)
