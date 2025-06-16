@@ -22,3 +22,6 @@ class Reports:
                 self.logger = logger 
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+            
+
+    def save ()

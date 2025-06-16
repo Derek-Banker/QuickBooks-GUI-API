@@ -1,14 +1,36 @@
-QuickBooks-Invoice-Saver/
-├── pyproject.toml
+QuickBooks-GUI-API/
 ├── README.md
 ├── LICENSE
+├── pyproject.toml
+├── configs/
+│   ├── config.toml
+│   └── defaults/
+│       └── defaults_qb-gui-api.toml
+├── setup_cli.py
 ├── src/
-│   └── invoice_saver/
+│   └── quickbooks_gui_api/
 │       ├── __init__.py
-│       ├── quickbooks_invoice_saver.py
-│       └── tools/
-│           ├── process_manager.py
-│           └── window_manager.py
+│       ├── setup.py
+│       ├── gui_api.py
+│       ├── apis/
+│       │   ├── __init__.py
+│       │   ├── invoices.py
+│       │   └── reports.py
+│       ├── managers/
+│       │   ├── __init__.py
+│       │   ├── image.py
+│       │   ├── ocr.py
+│       │   ├── processes.py
+│       │   └── windows.py
+│       └── models/
+│           ├── __init__.py
+│           ├── image.py
+│           ├── invoice.py
+│           └── report.py
+├── struct.txt
 └── tests/
+    ├── test.py
+    ├── test_orc.py
     ├── test_process_manager.py
+    ├── test_test.py
     └── test_window_manager.py

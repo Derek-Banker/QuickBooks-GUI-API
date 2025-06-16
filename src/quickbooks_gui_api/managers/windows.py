@@ -1,9 +1,11 @@
 # src\invoice_saver\tools\window_manager.py
 
-from typing import List, Dict
-from rapidfuzz import fuzz
-
 import logging
+from rapidfuzz import fuzz
+from pywinauto import Application, Desktop
+from typing import List, Dict, Tuple, Any, Final, overload
+
+
 
 class WindowManager:
     """
@@ -54,23 +56,78 @@ class WindowManager:
         :type title: str
         :returns bool: True: Attempt successful. False: Attempt failed. 
         """
-        pass
+        return False
 
     def get_active_window(self) -> str:
         """ Returns the name of the window that is currently focused. """
-
-        pass
+        return ""
 
     def get_all_windows_(self, ) -> List[str]:
+        return [""]
+
+    def window_control(self,
+                       target_title: str,
+                        trigger: List[str],
+                        attempt_focus: bool = True,
+                        expected_load_time: float = 0,
+                        retries: int = 0
+                        ):
         pass
 
-    # def window_control(target_title: str,
-    #                     trigger: List[str],
-    #                     attempt_focus: bool = True,
-    #                     expected_load_time: float = 0,
-    #                     retries: int = 0
-    #                     ):
-    #     pass
+    def get_window_size(self, window: Application) -> Tuple[int, int]:
+        rect = window.rectangle()
+        return (rect.width(), rect.height())
+
+    def get_window_origin(self, window: Application) -> tuple[int, int]:
+        rect = window.rectangle()
+        return (rect.left, rect.top)
+
+    def get_window_title(self, window: Application) -> str:
+        return window.window_text()
+
+    def is_dialog(self, window: Application) -> bool:
+        return window.friendly_class_name().lower() in ["dialog", "window"]
 
 
+    def is_focused(self, window: Application) -> bool:
+        focused = Desktop(backend=window.backend.name).get_active()
+        return focused.handle == window.handle
+    
+    def find_active_quickbooks_dialog(self):
+        windows = Desktop(backend="uia").windows()
+        for w in windows:
+            title = w.window_text()
+            if "QuickBooks" in title or w.class_name().startswith("Intuit"):
+                if w.is_visible() and w.is_enabled():
+                    return w
+        return None
+    
+    def get_dialogs(self) -> List[str]:
+        return [""]
+    
 
+    def send_input(
+        self,
+        keys: str | List[str],
+        send_count: int = 1,
+        delay: float = 0
+    ) -> None:
+        pass
+
+    # --- Top level functions --------------------------------------------------
+
+    def home(self, max_tries = 10) -> None:
+
+        while max_tries != 0:
+            if len(self.get_dialogs()) > 0:
+                self.send_input("esc")
+                max_tries -= 1 
+            else:
+                return
+        
+        raise:
+
+    
+
+
+    
