@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import BinaryIO, Literal
+from typing import BinaryIO, Literal, List
 from PIL import Image as PILImage
 import numpy
 import mss
@@ -28,7 +28,7 @@ class ImageManager:
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
-    def screenshot(self, 
+    def capture(self, 
                    size: tuple[int, int],
                    source: tuple[int, int] = (0, 0),
                    ) -> Image:
@@ -60,7 +60,7 @@ class ImageManager:
         return image
 
     def isolate_regions(self,
-                        image: Image,
+                        image: List[Image] | Image ,
                         color: str | tuple[int,int,int]
                         ) -> list[tuple(Image,int)]:
         pass

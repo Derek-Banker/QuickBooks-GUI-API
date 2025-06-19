@@ -1,13 +1,16 @@
 import pyautogui
-from PIL import Image, ImageOps
 import numpy as np
 import time
 import mss
 import easyocr
+
 import pytesseract
-from PIL import Image
 import logging
 
+from typing import List
+from PIL import Image, ImageOps
+
+from src.quickbooks_gui_api.models import Image
 
 class OCRManager:
     """
@@ -26,6 +29,15 @@ class OCRManager:
                 self.logger = logger 
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+            
+    def get_text(
+        self, 
+        image: List[Image] | Image,
+        config: str = ""
+        ) -> list[str] | str:
+        """ """
+        return ""
+
         
 
 def screenshot_crop_to_color(region, target_color, tolerance=10, screenshot_path='screenshot.png', cropped_path='cropped.png'):
@@ -97,3 +109,6 @@ def crop_blank_borders(image_path, cleaned_image_path='cleaned.png'):
 #         screenshot = sct.grab(monitor)
 #         img = Image.frombytes('RGB', screenshot.size, screenshot.rgb)
 #         img.save("test.png")
+
+    
+

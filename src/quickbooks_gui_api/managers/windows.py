@@ -1,9 +1,11 @@
 # src\invoice_saver\tools\window_manager.py
 
 import logging
-from rapidfuzz import fuzz
+
 from pywinauto import Application, Desktop
 from typing import List, Dict, Tuple, Any, Final, overload
+
+from src.quickbooks_gui_api.models import Window
 
 
 
@@ -13,7 +15,7 @@ class WindowManager:
     Attributes:
         logger (logging.Logger): Logger instance for logging operations.
     """
-
+    
 
     def __init__(self, 
                  logger: logging.Logger | None  = None
@@ -58,9 +60,19 @@ class WindowManager:
         """
         return False
 
-    def get_active_window(self) -> str:
+    def active_window(self) -> Window:
         """ Returns the name of the window that is currently focused. """
-        return ""
+        return Window("",
+                      (0,0),
+                      (0,0)
+                     )
+    
+    def active_dialog(self) -> Window:
+        """ Returns the name of the dialog that is currently focused. """
+        return Window("",
+                      (0,0),
+                      (0,0)
+                     )
 
     def get_all_windows_(self, ) -> List[str]:
         return [""]
@@ -108,8 +120,10 @@ class WindowManager:
 
     def send_input(
         self,
-        keys: str | List[str],
+        keys: str | List[str] | None = None,
         send_count: int = 1,
+        *,
+        string: str | None = None, 
         delay: float = 0
     ) -> None:
         pass
