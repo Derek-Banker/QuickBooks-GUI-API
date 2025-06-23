@@ -59,11 +59,18 @@ class ImageManager:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_regions(self,
+    def isolate_region(self,
+                        image: Image ,
+                        color: str | tuple[int,int,int]
+                        ) -> Image:
+        return Image()
+    
+    def isolate_multiple_regions(self,
                         image: List[Image] | Image ,
                         color: str | tuple[int,int,int]
-                        ) -> list[tuple(Image,int)]:
-        pass
+                        ) -> List[Image]:
+        
+        return List[Image]
 
     def modify_color(self,
                      image: Image,

@@ -128,6 +128,25 @@ class WindowManager:
     ) -> None:
         pass
 
+    def click(
+        self, 
+        x: int | None = None, 
+        y: int | None = None, 
+        *,
+        position: Tuple[int, int] | None = None
+    ) -> None:
+
+        if x is None and y is None and position is None:
+            error = ValueError("All parameters are none. `x` and `y`, or `position` must be provided.")
+            self.logger.error(error)
+            raise error
+
+        if position is not None:
+            x = position[0]
+            y = position[1]
+
+
+        pass
     # --- Top level functions --------------------------------------------------
 
     def home(self, max_tries = 10) -> None:

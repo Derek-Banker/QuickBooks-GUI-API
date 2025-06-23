@@ -32,9 +32,9 @@ class OCRManager:
             
     def get_text(
         self, 
-        image: List[Image] | Image,
+        image: Image,
         config: str = ""
-        ) -> list[str] | str:
+        ) ->  str:
         """ """
         return ""
 
