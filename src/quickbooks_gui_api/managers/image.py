@@ -28,10 +28,19 @@ class ImageManager:
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
-    def capture(self, 
-                   size: tuple[int, int],
-                   source: tuple[int, int] = (0, 0),
-                   ) -> Image:
+    def capture(
+            self, 
+            size: tuple[int, int],
+            source: tuple[int, int] = (0, 0),
+        ) -> Image:
+        """
+        Capture a screenshot of the screen according to the parameters.
+
+        :param size: Size of the capture region. Origin is top left. 
+        :type size: tuple[int(height), int(width)]
+        :param source: Offset of the capture region.
+        :type source: tuple[int(x), int(y)] = (0, 0)
+        """
         with mss.mss() as sct:
             monitor = {
                 "left": source[0],
@@ -44,22 +53,73 @@ class ImageManager:
             image = Image(source=source, size=size, img=img)
             return image
         
-    def crop(self,
-             image: Image, 
-             test_vertical: bool = True, 
-             test_horizontal: bool = True
-             ) -> Image:
+    def crop(
+            self,
+            image:          Image,
+            from_top:       int = 0,
+            from_bottom:    int = 0,
+            from_left:      int = 0,
+            from_right:     int = 0,  
+        ) -> Image:
+        """
+        Reduces the provided image by the provided dimensions.
+
+        :param image: The provided image to crop.
+        :type image: Image
+        :param from_top: Rows of pixels removed from the image. Starting at the top going down.
+        :type from_top: int = 0
+        :param from_bottom: Rows of pixels removed from the image. Starting at the bottom going up.
+        :type from_bottom: int = 0 
+        :param from_left: Columns of pixels removed from the image. Starting from the left going right. 
+        :type from_left: int = 0
+        :param from_right: Columns of pixels removed from the image. Starting from the right going left.
+        :type from_right: int = 0
+        """
+
+        if image.size[0] <= (from_bottom + from_bottom):
+            error = ValueError("The provided parameters would remove more rows than are in the image.")
+            self.logger.error(error)
+            raise error
         
-        if not (test_vertical and test_horizontal):
+        if image.size[1] <= (from_left + from_right):
+            error = ValueError("The provided parameters would remove more columns than are in the image.")
+            self.logger.error(error)
+            raise error
+    
+        if (from_top + from_bottom + from_right + from_left) == 0:
+            self.logger.warning("No pixels were removed from the image. All parameters are `0`.")
+            return image
+        
+        # TODO implement functionality. 
+
+        return Image()
+
+    def line_test(self,
+             image: Image, 
+             vertical: bool = True, 
+             horizontal: bool = True
+             ) -> Image:
+        """
+        Wrapper for the individual line test functions.
+
+        :param image: The image instance to operate on.
+        :type image: Image
+        :param vertical: Run a vertical line test on the image.
+        :type vertical: bool = True
+        :param horizontal: Run a horizontal line test on the image.
+        :type horizontal: bool = True
+        """
+
+        if not (vertical and horizontal):
             raise ValueError("At least one of vertical or horizontal must be True.")
         
-        if test_vertical:
+        if vertical:
             image = self._vertical_line_test(image)
-        if test_horizontal:
+        if horizontal:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_region(self,
+    def isolate_region(self, 
                         image: Image ,
                         color: str | tuple[int,int,int]
                         ) -> Image:
