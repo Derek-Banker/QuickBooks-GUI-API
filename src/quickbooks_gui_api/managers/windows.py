@@ -5,7 +5,7 @@ import logging
 from pywinauto import Application, Desktop
 from typing import List, Dict, Tuple, Any, Final, overload
 
-from src.quickbooks_gui_api.models import Window
+from ..models import Window
 
 
 
@@ -158,7 +158,7 @@ class WindowManager:
             else:
                 return
         
-        raise:
+        raise RuntimeError()
 
     
 

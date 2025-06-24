@@ -10,7 +10,7 @@ import logging
 from typing import List
 from PIL import Image, ImageOps
 
-from src.quickbooks_gui_api.models import Image
+from ..models import Image
 
 class OCRManager:
     """

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typing import List, Dict, Any, overload
 
-from src.quickbooks_gui_api.managers import ImageManager, OCRManager, ProcessManager, WindowManager
+from .managers import ImageManager, OCRManager, ProcessManager, WindowManager
 
 
 
