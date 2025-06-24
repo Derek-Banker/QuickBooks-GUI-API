@@ -1,12 +1,14 @@
 QuickBooks-GUI-API/
-├── README.md
-├── LICENSE
+├── dist/
 ├── pyproject.toml
+├── LICENSE
+├── README.md
+├── setup_cli.py
+├── struct.txt
 ├── configs/
 │   ├── config.toml
 │   └── defaults/
 │       └── defaults_qb-gui-api.toml
-├── setup_cli.py
 ├── src/
 │   └── quickbooks_gui_api/
 │       ├── __init__.py
@@ -15,21 +17,26 @@ QuickBooks-GUI-API/
 │       ├── apis/
 │       │   ├── __init__.py
 │       │   ├── invoices.py
-│       │   └── reports.py
+│       │   ├── reports.py
+│       │   └── api_exceptions.py
 │       ├── managers/
 │       │   ├── __init__.py
+│       │   ├── processes.py
 │       │   ├── image.py
 │       │   ├── ocr.py
-│       │   ├── processes.py
-│       │   └── windows.py
+│       │   ├── string.py
+│       │   ├── windows.py
+│       │   └── manager_exceptions.py
 │       └── models/
 │           ├── __init__.py
-│           ├── image.py
 │           ├── invoice.py
-│           └── report.py
-├── struct.txt
+│           ├── report.py
+│           ├── image.py
+│           └── window.py
 └── tests/
     ├── test.py
+    ├── test_CCA.py
+    ├── test_image_manager.py
     ├── test_orc.py
     ├── test_process_manager.py
     ├── test_test.py
