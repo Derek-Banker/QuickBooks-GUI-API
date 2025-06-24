@@ -10,7 +10,7 @@ import cv2
 
 from pathlib import Path
 
-from src.quickbooks_gui_api.models.image import Image
+from ..models import Image
 
 class Color:
     """

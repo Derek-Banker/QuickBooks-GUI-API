@@ -3,7 +3,7 @@ import sys
 import logging
 from pathlib import Path
 
-from src.quickbooks_gui_api.setup import Setup  # <-- Replace with your actual module/package name
+from quickbooks_gui_api.setup import Setup
 
 def main():
     parser = argparse.ArgumentParser(
