@@ -1,3 +1,5 @@
+# src\quickbooks_gui_api\managers\image.py
+
 from __future__ import annotations
 import logging
 from typing import BinaryIO, Literal, List, overload, Tuple
