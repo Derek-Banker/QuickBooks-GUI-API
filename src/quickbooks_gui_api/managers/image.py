@@ -154,14 +154,18 @@ class ImageManager:
         :type   from_left:      int = 0
         :param  from_right:     Columns of pixels removed from the image. Starting from the right going left.
         :type   from_right:     int = 0
+        :returns: Cropped image instance.
+        :rtype: Image
         """
 
-        if image.size[0] <= (from_bottom + from_bottom):
+        width, height = image.size
+
+        if height <= (from_top + from_bottom):
             error = ValueError("The provided parameters would remove more rows than are in the image.")
             self.logger.error(error)
             raise error
-        
-        if image.size[1] <= (from_left + from_right):
+
+        if width <= (from_left + from_right):
             error = ValueError("The provided parameters would remove more columns than are in the image.")
             self.logger.error(error)
             raise error
@@ -170,9 +174,20 @@ class ImageManager:
             self.logger.warning("No pixels were removed from the image. All parameters are `0`.")
             return image
         
-        # TODO implement functionality. 
+        left = from_left
+        top = from_top
+        right = width - from_right
+        bottom = height - from_bottom
 
-        return Image()
+        cropped = image.img.crop((left, top, right, bottom))
+
+        new_source = (
+            image.source[0] + left if image._source_x is not None else left,
+            image.source[1] + top if image._source_y is not None else top,
+        )
+        new_size = (right - left, bottom - top)
+
+        return Image(source=new_source, size=new_size, img=cropped)
 
     def line_test(self,
              image: Image, 
@@ -199,11 +214,64 @@ class ImageManager:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_region(self, 
+    def isolate_region(self,
                         image: Image ,
-                        color: Color
+                        color: Color,
+                        tolerance: int = 0
                         ) -> Image:
-        return Image()
+        """Isolate the rectangular region of ``image`` containing ``color``.
+
+        The function searches ``image`` for pixels matching ``color`` (within
+        ``tolerance`` for each RGB channel) and returns a new :class:`Image`
+        cropped to the bounding box of those pixels.
+
+        Parameters
+        ----------
+        image : Image
+            The image to search within.
+        color : Color
+            The color to locate.
+        tolerance : int, optional
+            Acceptable deviation for each channel when matching ``color``.
+
+        Returns
+        -------
+        Image
+            A new image instance cropped to the detected region.
+
+        Raises
+        ------
+        ValueError
+            If no region containing ``color`` is found.
+        """
+
+        img_array = numpy.array(image.img)
+        target = numpy.array(color.rgb)
+        lower = numpy.maximum(0, target - tolerance)
+        upper = numpy.minimum(255, target + tolerance)
+
+        mask = cv2.inRange(img_array, lower, upper)
+        coords = numpy.argwhere(mask)
+
+        if coords.size == 0:
+            raise ValueError("Target color not found in image")
+
+        top_left = coords.min(axis=0)
+        bottom_right = coords.max(axis=0)
+
+        left = int(top_left[1])
+        top = int(top_left[0])
+        right = int(bottom_right[1]) + 1
+        bottom = int(bottom_right[0]) + 1
+
+        cropped_img = image.img.crop((left, top, right, bottom))
+        new_source = (
+            image.source[0] + left if image._source_x is not None else left,
+            image.source[1] + top if image._source_y is not None else top,
+        )
+        new_size = (right - left, bottom - top)
+
+        return Image(source=new_source, size=new_size, img=cropped_img)
     
     def isolate_multiple_regions(
             self,
@@ -220,18 +288,27 @@ class ImageManager:
         :type   target_color:   Color
         :param  tolerance:      The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling
         :type   tolerance:      Color
+        :returns: List of isolated image regions matching the color.
+        :rtype: List[Image]
         """
-        img = numpy.array(image)
+        img_array = numpy.array(image.img)
         lower = numpy.maximum(0, numpy.array(target_color.rgb) - tolerance)
         upper = numpy.minimum(255, numpy.array(target_color.rgb) + tolerance)
-        mask = cv2.inRange(img, lower, upper)
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
-        # stats[i] = [left, top, width, height, area]
-        regions = []
-        for i in range(1, num_labels):  # skip the background
+        mask = cv2.inRange(img_array, lower, upper)
+        num_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+
+        regions: List[Image] = []
+        for i in range(1, num_labels):  # Skip background label 0
             x, y, w, h, area = stats[i]
-            if area > 10:  # ignore noise
-                regions.append(img[y:y+h, x:x+w])
+            if area <= 0:
+                continue
+            cropped_img = image.img.crop((x, y, x + w, y + h))
+            new_source = (
+                image.source[0] + x if image._source_x is not None else x,
+                image.source[1] + y if image._source_y is not None else y,
+            )
+            regions.append(Image(source=new_source, size=(w, h), img=cropped_img))
+
         return regions
 
     def modify_color(
@@ -240,7 +317,7 @@ class ImageManager:
             target_color: Color,
             end_color: Color,
             mode: Literal["blacklist","whitelist"]
-        ) -> Image:       
+        ) -> Image:
         """
         Replace one color with another color.
 
@@ -250,9 +327,28 @@ class ImageManager:
         :type   target_color:   Color
         :param  end_color:      The color to replace the target with.
         :type   end_color:      Color
+        :param  mode:           If ``whitelist`` only pixels matching
+                                ``target_color`` are replaced. If ``blacklist``
+                                all other pixels are replaced.
+        :type   mode:           Literal["blacklist", "whitelist"]
+        :returns: Modified image instance.
+        :rtype: Image
         """
 
-        return Image()
+        img_array = numpy.array(image.img)
+        target = numpy.array(target_color.rgb)
+        replacement = numpy.array(end_color.rgb)
+
+        if mode == "whitelist":
+            mask = numpy.all(img_array == target, axis=-1)
+        else:  # blacklist
+            mask = numpy.any(img_array != target, axis=-1)
+
+        img_array[mask] = replacement
+        new_img = PILImage.fromarray(img_array.astype("uint8"))
+        image.img = new_img
+        image.size = new_img.size
+        return image
 
     def _vertical_line_test(
             self, 
