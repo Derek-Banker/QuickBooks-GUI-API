@@ -216,35 +216,27 @@ class ImageManager:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_region(self,
-                        image: Image ,
-                        color: Color,
-                        tolerance: int = 0
-                        ) -> Image:
-        """Isolate the rectangular region of ``image`` containing ``color``.
+    def isolate_region(
+        self,
+        image: Image,
+        color: Color,
+        tolerance: int = 0,
+    ) -> Image:
+        """Return a cropped image of the area matching ``color``.
 
-        The function searches ``image`` for pixels matching ``color`` (within
-        ``tolerance`` for each RGB channel) and returns a new :class:`Image`
-        cropped to the bounding box of those pixels.
+        The method scans ``image`` for pixels whose values are within ``tolerance``
+        of ``color`` and crops the image to the smallest rectangle containing all
+        matching pixels.
 
-        Parameters
-        ----------
-        image : Image
-            The image to search within.
-        color : Color
-            The color to locate.
-        tolerance : int, optional
-            Acceptable deviation for each channel when matching ``color``.
-
-        Returns
-        -------
-        Image
-            A new image instance cropped to the detected region.
-
-        Raises
-        ------
-        ValueError
-            If no region containing ``color`` is found.
+        :param image: Image instance to search.
+        :type image: Image
+        :param color: Target color to locate in ``image``.
+        :type color: Color
+        :param tolerance: Allowed deviation for each color channel.
+        :type tolerance: int, optional
+        :returns: A new image cropped to the detected region.
+        :rtype: Image
+        :raises ValueError: If ``color`` is not found in ``image``.
         """
 
         img_array = numpy.array(image.img)
@@ -285,22 +277,25 @@ class ImageManager:
         return Image(source=new_source, size=new_size, img=cropped_img)
     
     def isolate_multiple_regions(
-            self,
-            image: Image, 
-            target_color: Color, 
-            tolerance=10
-        ) -> List[Image]:
-        """
-        Use Connected Component Analysis for the identification and isolation of multiple regions within a image.
+        self,
+        image: Image,
+        target_color: Color,
+        tolerance: int = 10,
+    ) -> List[Image]:
+        """Locate all regions of ``image`` matching ``target_color``.
 
-        :param  image:          The image to operate on.
-        :type   image:          Image
-        :param  target_color:   The color to focus on.  
-        :type   target_color:   Color
-        :param  tolerance:      The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling
-        :type   tolerance:      Color
-        :returns: List of isolated image regions matching the color.
-        :rtype: List[Image]
+        Connected-component analysis is used to group neighbouring pixels of the
+        target color into individual regions.
+
+        :param image: Image to analyse.
+        :type image: Image
+        :param target_color: Colour to search for.
+        :type target_color: Color
+        :param tolerance: Allowed deviation for each channel when matching the
+            colour.
+        :type tolerance: int, optional
+        :returns: A list of images cropped to the matching regions.
+        :rtype: list[Image]
         """
         img_array = numpy.array(image.img)
         channels = img_array.shape[2] if img_array.ndim == 3 else 1
