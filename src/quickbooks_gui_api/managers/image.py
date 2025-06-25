@@ -248,9 +248,18 @@ class ImageManager:
         """
 
         img_array = numpy.array(image.img)
-        target = numpy.array(color.rgb, dtype=img_array.dtype)
-        lower = numpy.maximum(0, target - tolerance).astype(img_array.dtype)
-        upper = numpy.minimum(255, target + tolerance).astype(img_array.dtype)
+        channels = img_array.shape[2] if img_array.ndim == 3 else 1
+        target_list = list(color.rgb)
+        if channels == 4:
+            target_list.append(255)
+            tol_list = [tolerance, tolerance, tolerance, 0]
+        else:
+            tol_list = [tolerance] * len(target_list)
+
+        target = numpy.array(target_list, dtype=img_array.dtype)
+        tol_array = numpy.array(tol_list, dtype=img_array.dtype)
+        lower = numpy.maximum(0, target - tol_array)
+        upper = numpy.minimum(255, target + tol_array)
 
         mask = cv2.inRange(img_array, lower, upper)
         coords = numpy.argwhere(mask)
@@ -294,9 +303,18 @@ class ImageManager:
         :rtype: List[Image]
         """
         img_array = numpy.array(image.img)
-        target = numpy.array(target_color.rgb, dtype=img_array.dtype)
-        lower = numpy.maximum(0, target - tolerance).astype(img_array.dtype)
-        upper = numpy.minimum(255, target + tolerance).astype(img_array.dtype)
+        channels = img_array.shape[2] if img_array.ndim == 3 else 1
+        target_list = list(target_color.rgb)
+        if channels == 4:
+            target_list.append(255)
+            tol_list = [tolerance, tolerance, tolerance, 0]
+        else:
+            tol_list = [tolerance] * len(target_list)
+
+        target = numpy.array(target_list, dtype=img_array.dtype)
+        tol_array = numpy.array(tol_list, dtype=img_array.dtype)
+        lower = numpy.maximum(0, target - tol_array)
+        upper = numpy.minimum(255, target + tol_array)
         mask = cv2.inRange(img_array, lower, upper)
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
