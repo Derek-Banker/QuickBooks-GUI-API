@@ -19,7 +19,7 @@ from quickbooks_gui_api.models import Image
 
 # --- Test Image ---
 logger.info("=== Image load test ===")
-TEST_IMG_PATH = Path(r"tests\Test Case - Image Manager.png")
+TEST_IMG_PATH = Path(r"samples\image_manager\Test Case - Image Manager.png")
 start = datetime.now()
 img = Image((0, 0), (500, 500)).load(TEST_IMG_PATH)
 stop = datetime.now()
