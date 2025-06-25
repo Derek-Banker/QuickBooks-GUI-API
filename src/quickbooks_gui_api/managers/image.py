@@ -215,8 +215,39 @@ class ImageManager:
         :raises ValueError: If ``color`` is not found in ``image``.
         """
 
-        
-    
+        arr = numpy.array(image.img.convert("RGB"))
+        target = numpy.array(color.rgb)
+
+        diff = numpy.abs(arr - target)
+        mask = numpy.all(diff <= tolerance, axis=-1)
+
+        if not mask.any():
+            error = ValueError("Target color not found in image.")
+            self.logger.error(error)
+            raise error
+
+        coords = numpy.argwhere(mask)
+        top_left = coords.min(axis=0)
+        bottom_right = coords.max(axis=0)
+
+        crop_box = (
+            int(top_left[1]),
+            int(top_left[0]),
+            int(bottom_right[1]) + 1,
+            int(bottom_right[0]) + 1,
+        )
+
+        cropped_img = image.img.crop(crop_box)
+
+        new_source = (
+            image.source[0] + crop_box[0] if image._source_x is not None else crop_box[0],
+            image.source[1] + crop_box[1] if image._source_y is not None else crop_box[1],
+        )
+        new_size = (crop_box[2] - crop_box[0], crop_box[3] - crop_box[1])
+
+        return Image(source=new_source, size=new_size, img=cropped_img)
+
+
     def isolate_multiple_regions(
         self,
         image: Image,
@@ -238,7 +269,40 @@ class ImageManager:
         :returns: A list of images cropped to the matching regions.
         :rtype: list[Image]
         """
-        
+
+        arr = numpy.array(image.img.convert("RGB"))
+        target = numpy.array(target_color.rgb)
+
+        diff = numpy.abs(arr - target)
+        mask = numpy.all(diff <= tolerance, axis=-1).astype("uint8")
+
+        if not mask.any():
+            return []
+
+        num_labels, labels = cv2.connectedComponents(mask, connectivity=8)
+        regions: List[Image] = []
+
+        for label in range(1, num_labels):
+            ys, xs = numpy.where(labels == label)
+            if ys.size == 0 or xs.size == 0:
+                continue
+            top = ys.min()
+            bottom = ys.max()
+            left = xs.min()
+            right = xs.max()
+
+            crop_box = (left, top, right + 1, bottom + 1)
+            cropped_img = image.img.crop(crop_box)
+
+            new_source = (
+                image.source[0] + left if image._source_x is not None else left,
+                image.source[1] + top if image._source_y is not None else top,
+            )
+            new_size = (right - left + 1, bottom - top + 1)
+
+            regions.append(Image(source=new_source, size=new_size, img=cropped_img))
+
+        return regions
 
     def modify_color(
             self,
@@ -253,11 +317,11 @@ class ImageManager:
 
         :param  image:          The image to operate on.
         :type   image:          Image
-        :param  target_color:   The color to replace.  
+        :param  target_color:   The color to replace.
         :type   target_color:   Color
         :param  end_color:      The color to replace the target with.
         :type   end_color:      Color
-        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
+        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling.
         :type   tolerance:  float = 0.0
         :param  mode:           If ``whitelist`` only pixels matching
                                 ``target_color`` are replaced. If ``blacklist``
@@ -266,6 +330,24 @@ class ImageManager:
         :returns: Modified image instance.
         :rtype: Image
         """
+
+        if mode not in ("whitelist", "blacklist"):
+            raise ValueError("mode must be 'blacklist' or 'whitelist'")
+
+        arr = numpy.array(image.img.convert("RGB"))
+        target = numpy.array(target_color.rgb)
+        replacement = numpy.array(end_color.rgb)
+
+        diff = numpy.abs(arr - target)
+        mask = numpy.all(diff <= tolerance, axis=-1)
+        if mode == "blacklist":
+            mask = ~mask
+
+        arr[mask] = replacement
+
+        new_img = PILImage.fromarray(arr)
+
+        return Image(source=image.source, size=image.size, img=new_img)
 
     def line_test(self,
              image: Image, 
@@ -293,32 +375,95 @@ class ImageManager:
         return image
 
     def _vertical_line_test(
-            self, 
+            self,
             image: Image,
-            tolerance: float = 0.0
-        ) -> Image: 
-        """
-        Runs a vertical line test on the provided image, allows for a variance tolerance.
-
-        :param  image:      Image to operate on. 
-        :type   image:      Image
-        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
-        :type   tolerance:  float = 0.0
-        """
-        
-
-    def _horizontal_line_test(
-            self, 
-            image: Image, 
             tolerance: float = 0.0
         ) -> Image:
         """
         Runs a vertical line test on the provided image, allows for a variance tolerance.
 
-        :param image: Image to operate on. 
+        Columns on the left and right edges that are a uniform colour (within
+        ``tolerance``) are removed from the image.
+
+        :param  image:      Image to operate on.
+        :type   image:      Image
+        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling.
+        :type   tolerance:  float = 0.0
+        """
+
+        arr = numpy.array(image.img.convert("RGB"))
+        height, width = arr.shape[:2]
+
+        left = 0
+        while left < width:
+            col = arr[:, left]
+            if numpy.all(numpy.abs(col - col[0]) <= tolerance):
+                left += 1
+            else:
+                break
+
+        right = width - 1
+        while right >= left:
+            col = arr[:, right]
+            if numpy.all(numpy.abs(col - col[0]) <= tolerance):
+                right -= 1
+            else:
+                break
+
+        crop_box = (left, 0, right + 1, height)
+        cropped_img = image.img.crop(crop_box)
+
+        new_source = (
+            image.source[0] + left if image._source_x is not None else left,
+            image.source[1] if image._source_y is not None else 0,
+        )
+        new_size = (crop_box[2] - crop_box[0], crop_box[3] - crop_box[1])
+
+        return Image(source=new_source, size=new_size, img=cropped_img)
+    def _horizontal_line_test(
+            self,
+            image: Image,
+            tolerance: float = 0.0
+        ) -> Image:
+        """
+        Runs a vertical line test on the provided image, allows for a variance tolerance.
+
+        Rows on the top and bottom edges that are a uniform colour (within
+        ``tolerance``) are removed from the image.
+
+        :param image: Image to operate on.
         :type image: Image
-        :param tolerance: The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
+        :param tolerance: The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling.
         :type tolerance: float = 0.0
         """
-       
-    
+
+        arr = numpy.array(image.img.convert("RGB"))
+        height, width = arr.shape[:2]
+
+        top = 0
+        while top < height:
+            row = arr[top]
+            if numpy.all(numpy.abs(row - row[0]) <= tolerance):
+                top += 1
+            else:
+                break
+
+        bottom = height - 1
+        while bottom >= top:
+            row = arr[bottom]
+            if numpy.all(numpy.abs(row - row[0]) <= tolerance):
+                bottom -= 1
+            else:
+                break
+
+        crop_box = (0, top, width, bottom + 1)
+        cropped_img = image.img.crop(crop_box)
+
+        new_source = (
+            image.source[0] if image._source_x is not None else 0,
+            image.source[1] + top if image._source_y is not None else top,
+        )
+        new_size = (crop_box[2] - crop_box[0], crop_box[3] - crop_box[1])
+
+        return Image(source=new_source, size=new_size, img=cropped_img)
+
