@@ -26,8 +26,8 @@ stop = datetime.now()
 logger.info(f"Previous operation time: `{stop - start}`.\n")
 
 
-red =   Color(hex_val="ed1c24")
-blue =  Color(hex_val="3f48cc")
+red   = Color(hex_val="ed1c24")
+blue  = Color(hex_val="3f48cc")
 white = Color(hex_val="ffffff")
 
 
