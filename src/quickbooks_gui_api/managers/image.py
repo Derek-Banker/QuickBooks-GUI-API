@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import logging
-from typing import BinaryIO, Literal, List, overload, Tuple
+from typing import Literal, List, overload, Tuple
 from PIL import Image as PILImage
 import numpy
 import mss
@@ -191,6 +191,82 @@ class ImageManager:
 
         return Image(source=new_source, size=new_size, img=cropped)
 
+
+    def isolate_region(
+        self,
+        image: Image,
+        color: Color,
+        tolerance: int = 0,
+    ) -> Image:
+        """Return a cropped image of the area matching ``color``.
+
+        The method scans ``image`` for pixels whose values are within ``tolerance``
+        of ``color`` and crops the image to the smallest rectangle containing all
+        matching pixels.
+
+        :param image: Image instance to search.
+        :type image: Image
+        :param color: Target color to locate in ``image``.
+        :type color: Color
+        :param tolerance: Allowed deviation for each color channel.
+        :type tolerance: int, optional
+        :returns: A new image cropped to the detected region.
+        :rtype: Image
+        :raises ValueError: If ``color`` is not found in ``image``.
+        """
+
+        
+    
+    def isolate_multiple_regions(
+        self,
+        image: Image,
+        target_color: Color,
+        tolerance: int = 10,
+    ) -> List[Image]:
+        """Locate all regions of ``image`` matching ``target_color``.
+
+        Connected-component analysis is used to group neighbouring pixels of the
+        target color into individual regions.
+
+        :param image: Image to analyse.
+        :type image: Image
+        :param target_color: Colour to search for.
+        :type target_color: Color
+        :param tolerance: Allowed deviation for each channel when matching the
+            colour.
+        :type tolerance: int, optional
+        :returns: A list of images cropped to the matching regions.
+        :rtype: list[Image]
+        """
+        
+
+    def modify_color(
+            self,
+            image: Image,
+            target_color: Color,
+            end_color: Color,
+            tolerance: float = 0.0,
+            mode: Literal["blacklist","whitelist"] = "whitelist"
+        ) -> Image:
+        """
+        Replace one color with another color.
+
+        :param  image:          The image to operate on.
+        :type   image:          Image
+        :param  target_color:   The color to replace.  
+        :type   target_color:   Color
+        :param  end_color:      The color to replace the target with.
+        :type   end_color:      Color
+        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
+        :type   tolerance:  float = 0.0
+        :param  mode:           If ``whitelist`` only pixels matching
+                                ``target_color`` are replaced. If ``blacklist``
+                                all other pixels are replaced.
+        :type   mode:           Literal["blacklist", "whitelist"]
+        :returns: Modified image instance.
+        :rtype: Image
+        """
+
     def line_test(self,
              image: Image, 
              vertical: bool = True, 
@@ -216,196 +292,25 @@ class ImageManager:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_region(
-        self,
-        image: Image,
-        color: Color,
-        tolerance: int = 0,
-    ) -> Image:
-        """Return a cropped image of the area matching ``color``.
-
-        The method scans ``image`` for pixels whose values are within ``tolerance``
-        of ``color`` and crops the image to the smallest rectangle containing all
-        matching pixels.
-
-        :param image: Image instance to search.
-        :type image: Image
-        :param color: Target color to locate in ``image``.
-        :type color: Color
-        :param tolerance: Allowed deviation for each color channel.
-        :type tolerance: int, optional
-        :returns: A new image cropped to the detected region.
-        :rtype: Image
-        :raises ValueError: If ``color`` is not found in ``image``.
-        """
-
-        img_array = numpy.asarray(image.img)
-
-        if img_array.ndim == 2:
-            img_array = img_array[:, :, numpy.newaxis]
-
-        channels = img_array.shape[2]
-
-        target = numpy.array(color.rgb, dtype=img_array.dtype)
-        if channels == 4:
-            target = numpy.append(target, 255)
-
-        tol = numpy.full(target.shape, tolerance, dtype=img_array.dtype)
-        if channels == 4:
-            tol[-1] = 0
-
-        lower = numpy.clip(target - tol, 0, 255)
-        upper = numpy.clip(target + tol, 0, 255)
-
-        mask = cv2.inRange(img_array, lower, upper)
-        y_idx, x_idx = numpy.nonzero(mask)
-
-        if x_idx.size == 0 or y_idx.size == 0:
-            raise ValueError("Target color not found in image")
-
-        left, right = int(x_idx.min()), int(x_idx.max())
-        top, bottom = int(y_idx.min()), int(y_idx.max())
-
-        cropped_img = image.img.crop((left, top, right + 1, bottom + 1))
-
-        new_source = (
-            image.source[0] + left if image._source_x is not None else left,
-            image.source[1] + top if image._source_y is not None else top,
-        )
-        new_size = (right - left + 1, bottom - top + 1)
-
-        return Image(source=new_source, size=new_size, img=cropped_img)
-    
-    def isolate_multiple_regions(
-        self,
-        image: Image,
-        target_color: Color,
-        tolerance: int = 10,
-    ) -> List[Image]:
-        """Locate all regions of ``image`` matching ``target_color``.
-
-        Connected-component analysis is used to group neighbouring pixels of the
-        target color into individual regions.
-
-        :param image: Image to analyse.
-        :type image: Image
-        :param target_color: Colour to search for.
-        :type target_color: Color
-        :param tolerance: Allowed deviation for each channel when matching the
-            colour.
-        :type tolerance: int, optional
-        :returns: A list of images cropped to the matching regions.
-        :rtype: list[Image]
-        """
-        img_array = numpy.asarray(image.img)
-
-        if img_array.ndim == 2:
-            img_array = img_array[:, :, numpy.newaxis]
-
-        channels = img_array.shape[2]
-
-        target = numpy.array(target_color.rgb, dtype=img_array.dtype)
-        if channels == 4:
-            target = numpy.append(target, 255)
-
-        tol = numpy.full(target.shape, tolerance, dtype=img_array.dtype)
-        if channels == 4:
-            tol[-1] = 0
-
-        lower = numpy.clip(target - tol, 0, 255)
-        upper = numpy.clip(target + tol, 0, 255)
-
-        mask = cv2.inRange(img_array, lower, upper)
-        num_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-
-        regions: List[Image] = []
-        for i in range(1, num_labels):
-            x, y, w, h, area = stats[i]
-            if area <= 0:
-                continue
-
-            cropped = image.img.crop((x, y, x + w, y + h))
-            new_source = (
-                image.source[0] + x if image._source_x is not None else x,
-                image.source[1] + y if image._source_y is not None else y,
-            )
-            regions.append(Image(source=new_source, size=(w, h), img=cropped))
-
-        return regions
-
-    def modify_color(
-            self,
-            image: Image,
-            target_color: Color,
-            end_color: Color,
-            mode: Literal["blacklist","whitelist"]
-        ) -> Image:
-        """
-        Replace one color with another color.
-
-        :param  image:          The image to operate on.
-        :type   image:          Image
-        :param  target_color:   The color to replace.  
-        :type   target_color:   Color
-        :param  end_color:      The color to replace the target with.
-        :type   end_color:      Color
-        :param  mode:           If ``whitelist`` only pixels matching
-                                ``target_color`` are replaced. If ``blacklist``
-                                all other pixels are replaced.
-        :type   mode:           Literal["blacklist", "whitelist"]
-        :returns: Modified image instance.
-        :rtype: Image
-        """
-
-        img_array = numpy.array(image.img)
-        target = numpy.array(target_color.rgb)
-        replacement = numpy.array(end_color.rgb)
-
-        if mode == "whitelist":
-            mask = numpy.all(img_array == target, axis=-1)
-        else:  # blacklist
-            mask = numpy.any(img_array != target, axis=-1)
-
-        img_array[mask] = replacement
-        new_img = PILImage.fromarray(img_array.astype("uint8"))
-        image.img = new_img
-        image.size = new_img.size
-        return image
-
     def _vertical_line_test(
             self, 
             image: Image,
-            tolerance: float = 100
-        ) -> Image:
+            tolerance: float = 0.0
+        ) -> Image: 
         """
         Runs a vertical line test on the provided image, allows for a variance tolerance.
 
         :param  image:      Image to operate on. 
         :type   image:      Image
         :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
-        :type   tolerance:  float = 100
+        :type   tolerance:  float = 0.0
         """
         
-        img = image.img
-        img_array = numpy.array(img)
-
-        left, right = 0, img_array.shape[1] - 1
-
-        while left <= right and numpy.all(img_array[:, left] == img_array[0, left]):
-            left += 1
-
-        while right >= left and numpy.all(img_array[:, right] == img_array[0, right]):
-            right -= 1
-
-        cleaned_img = img.crop((left, 0, right + 1, img_array.shape[0]))
-
-        image.img = cleaned_img
-        return image
 
     def _horizontal_line_test(
             self, 
             image: Image, 
-            tolerance: float = 100
+            tolerance: float = 0.0
         ) -> Image:
         """
         Runs a vertical line test on the provided image, allows for a variance tolerance.
@@ -413,22 +318,7 @@ class ImageManager:
         :param image: Image to operate on. 
         :type image: Image
         :param tolerance: The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling. 
-        :type tolerance: float = 100
+        :type tolerance: float = 0.0
         """
-        img = image.img
-        img_array = numpy.array(img)
-
-        top, bottom = 0, img_array.shape[0] - 1
-
-        while top <= bottom and numpy.all(img_array[top, :] == img_array[top, 0]):
-            top += 1
-
-        while bottom >= top and numpy.all(img_array[bottom, :] == img_array[bottom, 0]):
-            bottom -= 1
-
-        cleaned_img = img.crop((0, top, img_array.shape[1], bottom + 1))
-
-        image.img = cleaned_img
-        return image
-
+       
     
