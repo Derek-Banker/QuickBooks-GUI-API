@@ -10,7 +10,7 @@ import cv2
 
 from pathlib import Path
 
-from ..models import Image
+from quickbooks_gui_api.models import Image
 
 class Color:
     """
@@ -196,7 +196,7 @@ class ImageManager:
         self,
         image: Image,
         color: Color,
-        tolerance: int = 0,
+        tolerance: float = 0.0,
     ) -> Image:
         """Return a cropped image of the area matching ``color``.
 
@@ -209,7 +209,7 @@ class ImageManager:
         :param color: Target color to locate in ``image``.
         :type color: Color
         :param tolerance: Allowed deviation for each color channel.
-        :type tolerance: int, optional
+        :type tolerance: float = 0.0
         :returns: A new image cropped to the detected region.
         :rtype: Image
         :raises ValueError: If ``color`` is not found in ``image``.
@@ -221,11 +221,11 @@ class ImageManager:
         self,
         image: Image,
         target_color: Color,
-        tolerance: int = 10,
+        tolerance: float = 0.0,
     ) -> List[Image]:
         """Locate all regions of ``image`` matching ``target_color``.
 
-        Connected-component analysis is used to group neighbouring pixels of the
+        Connected-component analysis is used to group neighboring pixels of the
         target color into individual regions.
 
         :param image: Image to analyse.
@@ -234,7 +234,7 @@ class ImageManager:
         :type target_color: Color
         :param tolerance: Allowed deviation for each channel when matching the
             colour.
-        :type tolerance: int, optional
+        :type tolerance: float = 0.0
         :returns: A list of images cropped to the matching regions.
         :rtype: list[Image]
         """
