@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Literal
 from PIL import Image as PILImage
 
+import logging
+logging.getLogger("PIL").setLevel(logging.WARNING)
 
 from pathlib import Path
 
