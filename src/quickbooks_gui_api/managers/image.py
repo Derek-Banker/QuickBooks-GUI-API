@@ -214,15 +214,12 @@ class ImageManager:
         :rtype: Image
         :raises ValueError: If ``color`` is not found in ``image``.
         """
-
         arr = numpy.array(image.img.convert("RGB"))
-        target = numpy.array(color.rgb)
-
-        diff = numpy.abs(arr - target)
-        mask = numpy.all(diff <= tolerance, axis=-1)
+        distances = self.color_distance_array(arr, color.rgb)
+        mask = distances <= tolerance
 
         if not mask.any():
-            error = ValueError("Target color not found in image.")
+            error = ValueError("Target color not found in image (within tolerance).")
             self.logger.error(error)
             raise error
 
@@ -236,7 +233,6 @@ class ImageManager:
             int(bottom_right[1]) + 1,
             int(bottom_right[0]) + 1,
         )
-
         cropped_img = image.img.crop(crop_box)
 
         new_source = (
@@ -249,38 +245,40 @@ class ImageManager:
 
 
     def isolate_multiple_regions(
-        self,
-        image: Image,
-        target_color: Color,
-        tolerance: float = 0.0,
-    ) -> List[Image]:
-        """Locate all regions of ``image`` matching ``target_color``.
-
-        Connected-component analysis is used to group neighboring pixels of the
-        target color into individual regions.
+            self,
+            image: Image,
+            target_color: Color,
+            tolerance: float = 0.0,
+            min_area: int | None = None,
+            min_size: Tuple[int | None, int | None] = (None, None),
+        ) -> List[Image]:
+        """
+        Locate all regions of ``image`` matching ``target_color`` with optional minimum area and size filtering.
 
         :param image: Image to analyse.
         :type image: Image
         :param target_color: Colour to search for.
         :type target_color: Color
-        :param tolerance: Allowed deviation for each channel when matching the
-            colour.
+        :param tolerance: Allowed deviation for each channel when matching the colour.
         :type tolerance: float = 0.0
+        :param min_area: Minimum area (in px) for a region to be returned.
+        :type min_area: int | None
+        :param min_size: Minimum width and height as (min_width, min_height).
+        :type min_size: Tuple[int | None, int | None]
         :returns: A list of images cropped to the matching regions.
         :rtype: list[Image]
         """
 
         arr = numpy.array(image.img.convert("RGB"))
-        target = numpy.array(target_color.rgb)
-
-        diff = numpy.abs(arr - target)
-        mask = numpy.all(diff <= tolerance, axis=-1).astype("uint8")
+        distances = self.color_distance_array(arr, target_color.rgb)
+        mask = (distances <= tolerance).astype('uint8')
 
         if not mask.any():
             return []
 
         num_labels, labels = cv2.connectedComponents(mask, connectivity=8)
-        regions: List[Image] = []
+        regions: list[Image] = []
+        min_width, min_height = min_size if min_size else (None, None)
 
         for label in range(1, num_labels):
             ys, xs = numpy.where(labels == label)
@@ -300,7 +298,13 @@ class ImageManager:
             )
             new_size = (right - left + 1, bottom - top + 1)
 
-            regions.append(Image(source=new_source, size=new_size, img=cropped_img))
+            region_img = Image(source=new_source, size=new_size, img=cropped_img)
+            area_ok = min_area is None or region_img.area >= min_area
+            width_ok = min_width is None or region_img.size[0] >= min_width
+            height_ok = min_height is None or region_img.size[1] >= min_height
+
+            if area_ok and width_ok and height_ok:
+                regions.append(region_img)
 
         return regions
 
@@ -335,17 +339,15 @@ class ImageManager:
             raise ValueError("mode must be 'blacklist' or 'whitelist'")
 
         arr = numpy.array(image.img.convert("RGB"))
-        target = numpy.array(target_color.rgb)
-        replacement = numpy.array(end_color.rgb)
-
-        diff = numpy.abs(arr - target)
-        mask = numpy.all(diff <= tolerance, axis=-1)
+        distances = self.color_distance_array(arr, target_color.rgb)
+        mask = distances <= tolerance
         if mode == "blacklist":
             mask = ~mask
 
-        arr[mask] = replacement
+        arr = arr.copy()
+        arr[mask] = numpy.array(end_color.rgb, dtype=arr.dtype)
 
-        new_img = PILImage.fromarray(arr)
+        new_img = PILImage.fromarray(arr.astype('uint8'))
 
         return Image(source=image.source, size=image.size, img=new_img)
 
@@ -467,3 +469,27 @@ class ImageManager:
 
         return Image(source=new_source, size=new_size, img=cropped_img)
 
+    @staticmethod
+    def color_distance(rgb1: Tuple[int, int, int], rgb2: Tuple[int, int, int]) -> float:
+        """
+        Compute the Euclidean (L2) distance between two RGB colors.
+
+        :param rgb1: First RGB color as (R, G, B) tuple.
+        :param rgb2: Second RGB color as (R, G, B) tuple.
+        :return: Euclidean distance between the two colors.
+        """
+        arr1 = numpy.array(rgb1, dtype=numpy.int32)
+        arr2 = numpy.array(rgb2, dtype=numpy.int32)
+        return float(numpy.linalg.norm(arr1 - arr2))
+
+    @staticmethod
+    def color_distance_array(arr: numpy.ndarray, rgb: tuple[int, int, int]) -> numpy.ndarray:
+        """
+        Compute the Euclidean distance from every pixel in `arr` to the target `rgb` color.
+        :param arr: Numpy array of shape (height, width, 3).
+        :param rgb: Target color as (R, G, B) tuple.
+        :return: Numpy array of distances, shape (height, width).
+        """
+        arr = arr.astype('int32')
+        target = numpy.array(rgb, dtype='int32')
+        return numpy.linalg.norm(arr - target, axis=-1)

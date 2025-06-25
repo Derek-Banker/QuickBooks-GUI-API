@@ -164,4 +164,4 @@ old.py
 
 bitwarden_sdk-1.0.0-cp312-none-win_amd64.whl
 configs/config.toml
-cropped.png
+test-*.png

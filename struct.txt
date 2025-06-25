@@ -1,14 +1,13 @@
 QuickBooks-GUI-API/
 ├── dist/
-├── pyproject.toml
-├── LICENSE
-├── README.md
-├── setup_cli.py
-├── struct.txt
 ├── configs/
 │   ├── config.toml
 │   └── defaults/
 │       └── defaults_qb-gui-api.toml
+├── pyproject.toml
+├── LICENSE
+├── README.md
+├── setup_cli.py
 ├── src/
 │   └── quickbooks_gui_api/
 │       ├── __init__.py
@@ -16,28 +15,32 @@ QuickBooks-GUI-API/
 │       ├── gui_api.py
 │       ├── apis/
 │       │   ├── __init__.py
+│       │   ├── api_exceptions.py
 │       │   ├── invoices.py
-│       │   ├── reports.py
-│       │   └── api_exceptions.py
+│       │   └── reports.py
 │       ├── managers/
 │       │   ├── __init__.py
-│       │   ├── processes.py
+│       │   ├── manager_exceptions.py
 │       │   ├── image.py
 │       │   ├── ocr.py
+│       │   ├── processes.py
 │       │   ├── string.py
-│       │   ├── windows.py
-│       │   └── manager_exceptions.py
+│       │   └── windows.py
 │       └── models/
 │           ├── __init__.py
 │           ├── invoice.py
 │           ├── report.py
 │           ├── image.py
 │           └── window.py
-└── tests/
-    ├── test.py
-    ├── test_CCA.py
-    ├── test_image_manager.py
-    ├── test_orc.py
-    ├── test_process_manager.py
-    ├── test_test.py
-    └── test_window_manager.py
+├── struct.txt
+├── test_reference/
+│   └── example.png
+├── tests/
+│   ├── test.py
+│   ├── test_CCA.py
+│   ├── test_image_manager.py
+│   ├── test_orc.py
+│   ├── test_process_manager.py
+│   ├── test_test.py
+│   └── test_window_manager.py
+└── unittests/

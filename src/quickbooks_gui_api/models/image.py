@@ -25,7 +25,8 @@ class Image:
         self._source_y: int | None = source[1]
         self._width:    int | None = size[0]
         self._height:   int | None = size[1]
-        self._path:     Path 
+        self._path:     Path| None = None
+        self._area:     int | None = None
 
         self._img: PILImage.Image | None = img
 
@@ -66,6 +67,16 @@ class Image:
         if value is not None and not isinstance(value, PILImage.Image):
             raise TypeError("Image must be a PIL Image object or None.")
         self._img = value
+
+    @property
+    def area(self) -> int:
+        if self._area is None:
+            if self._width is None or self._height is None:
+                raise ValueError("Area calculation was attempted, but `height` and or `width` is None.")
+            else:
+                self._area = self._width * self._height
+            
+        return self._area
 
     @property
     def path(self) -> Path | None:
