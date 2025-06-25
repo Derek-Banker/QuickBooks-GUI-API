@@ -216,119 +216,120 @@ class ImageManager:
             image = self._horizontal_line_test(image)
         return image
 
-    def isolate_region(self,
-                        image: Image ,
-                        color: Color,
-                        tolerance: int = 0
-                        ) -> Image:
-        """Isolate the rectangular region of ``image`` containing ``color``.
+    def isolate_region(
+        self,
+        image: Image,
+        color: Color,
+        tolerance: int = 0,
+    ) -> Image:
+        """Return a cropped image of the area matching ``color``.
 
-        The function searches ``image`` for pixels matching ``color`` (within
-        ``tolerance`` for each RGB channel) and returns a new :class:`Image`
-        cropped to the bounding box of those pixels.
+        The method scans ``image`` for pixels whose values are within ``tolerance``
+        of ``color`` and crops the image to the smallest rectangle containing all
+        matching pixels.
 
-        Parameters
-        ----------
-        image : Image
-            The image to search within.
-        color : Color
-            The color to locate.
-        tolerance : int, optional
-            Acceptable deviation for each channel when matching ``color``.
-
-        Returns
-        -------
-        Image
-            A new image instance cropped to the detected region.
-
-        Raises
-        ------
-        ValueError
-            If no region containing ``color`` is found.
+        :param image: Image instance to search.
+        :type image: Image
+        :param color: Target color to locate in ``image``.
+        :type color: Color
+        :param tolerance: Allowed deviation for each color channel.
+        :type tolerance: int, optional
+        :returns: A new image cropped to the detected region.
+        :rtype: Image
+        :raises ValueError: If ``color`` is not found in ``image``.
         """
 
-        img_array = numpy.array(image.img)
-        channels = img_array.shape[2] if img_array.ndim == 3 else 1
-        target_list = list(color.rgb)
-        if channels == 4:
-            target_list.append(255)
-            tol_list = [tolerance, tolerance, tolerance, 0]
-        else:
-            tol_list = [tolerance] * len(target_list)
+        img_array = numpy.asarray(image.img)
 
-        target = numpy.array(target_list, dtype=img_array.dtype)
-        tol_array = numpy.array(tol_list, dtype=img_array.dtype)
-        lower = numpy.maximum(0, target - tol_array)
-        upper = numpy.minimum(255, target + tol_array)
+        if img_array.ndim == 2:
+            img_array = img_array[:, :, numpy.newaxis]
+
+        channels = img_array.shape[2]
+
+        target = numpy.array(color.rgb, dtype=img_array.dtype)
+        if channels == 4:
+            target = numpy.append(target, 255)
+
+        tol = numpy.full(target.shape, tolerance, dtype=img_array.dtype)
+        if channels == 4:
+            tol[-1] = 0
+
+        lower = numpy.clip(target - tol, 0, 255)
+        upper = numpy.clip(target + tol, 0, 255)
 
         mask = cv2.inRange(img_array, lower, upper)
-        coords = numpy.argwhere(mask)
+        y_idx, x_idx = numpy.nonzero(mask)
 
-        if coords.size == 0:
+        if x_idx.size == 0 or y_idx.size == 0:
             raise ValueError("Target color not found in image")
 
-        top_left = coords.min(axis=0)
-        bottom_right = coords.max(axis=0)
+        left, right = int(x_idx.min()), int(x_idx.max())
+        top, bottom = int(y_idx.min()), int(y_idx.max())
 
-        left = int(top_left[1])
-        top = int(top_left[0])
-        right = int(bottom_right[1]) + 1
-        bottom = int(bottom_right[0]) + 1
+        cropped_img = image.img.crop((left, top, right + 1, bottom + 1))
 
-        cropped_img = image.img.crop((left, top, right, bottom))
         new_source = (
             image.source[0] + left if image._source_x is not None else left,
             image.source[1] + top if image._source_y is not None else top,
         )
-        new_size = (right - left, bottom - top)
+        new_size = (right - left + 1, bottom - top + 1)
 
         return Image(source=new_source, size=new_size, img=cropped_img)
     
     def isolate_multiple_regions(
-            self,
-            image: Image, 
-            target_color: Color, 
-            tolerance=10
-        ) -> List[Image]:
-        """
-        Use Connected Component Analysis for the identification and isolation of multiple regions within a image.
+        self,
+        image: Image,
+        target_color: Color,
+        tolerance: int = 10,
+    ) -> List[Image]:
+        """Locate all regions of ``image`` matching ``target_color``.
 
-        :param  image:          The image to operate on.
-        :type   image:          Image
-        :param  target_color:   The color to focus on.  
-        :type   target_color:   Color
-        :param  tolerance:      The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling
-        :type   tolerance:      Color
-        :returns: List of isolated image regions matching the color.
-        :rtype: List[Image]
+        Connected-component analysis is used to group neighbouring pixels of the
+        target color into individual regions.
+
+        :param image: Image to analyse.
+        :type image: Image
+        :param target_color: Colour to search for.
+        :type target_color: Color
+        :param tolerance: Allowed deviation for each channel when matching the
+            colour.
+        :type tolerance: int, optional
+        :returns: A list of images cropped to the matching regions.
+        :rtype: list[Image]
         """
-        img_array = numpy.array(image.img)
-        channels = img_array.shape[2] if img_array.ndim == 3 else 1
-        target_list = list(target_color.rgb)
+        img_array = numpy.asarray(image.img)
+
+        if img_array.ndim == 2:
+            img_array = img_array[:, :, numpy.newaxis]
+
+        channels = img_array.shape[2]
+
+        target = numpy.array(target_color.rgb, dtype=img_array.dtype)
         if channels == 4:
-            target_list.append(255)
-            tol_list = [tolerance, tolerance, tolerance, 0]
-        else:
-            tol_list = [tolerance] * len(target_list)
+            target = numpy.append(target, 255)
 
-        target = numpy.array(target_list, dtype=img_array.dtype)
-        tol_array = numpy.array(tol_list, dtype=img_array.dtype)
-        lower = numpy.maximum(0, target - tol_array)
-        upper = numpy.minimum(255, target + tol_array)
+        tol = numpy.full(target.shape, tolerance, dtype=img_array.dtype)
+        if channels == 4:
+            tol[-1] = 0
+
+        lower = numpy.clip(target - tol, 0, 255)
+        upper = numpy.clip(target + tol, 0, 255)
+
         mask = cv2.inRange(img_array, lower, upper)
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
         regions: List[Image] = []
-        for i in range(1, num_labels):  # Skip background label 0
+        for i in range(1, num_labels):
             x, y, w, h, area = stats[i]
             if area <= 0:
                 continue
-            cropped_img = image.img.crop((x, y, x + w, y + h))
+
+            cropped = image.img.crop((x, y, x + w, y + h))
             new_source = (
                 image.source[0] + x if image._source_x is not None else x,
                 image.source[1] + y if image._source_y is not None else y,
             )
-            regions.append(Image(source=new_source, size=(w, h), img=cropped_img))
+            regions.append(Image(source=new_source, size=(w, h), img=cropped))
 
         return regions
 
