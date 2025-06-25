@@ -19,13 +19,13 @@ class Image:
                  source: tuple[int | None, int | None] = (None, None),
                  size: tuple[int | None, int | None] = (None, None),
                  img: PILImage.Image | None = None,
-                 path: Path | None = None
+                #  path: Path | None = None
                  ) -> None:
-        self._source_x = source[0]
-        self._source_y = source[1]
-        self._width = size[0]
-        self._height = size[1]
-        self._path = path
+        self._source_x: int | None = source[0]
+        self._source_y: int | None = source[1]
+        self._width:    int | None = size[0]
+        self._height:   int | None = size[1]
+        self._path:     Path 
 
         self._img: PILImage.Image | None = img
 
