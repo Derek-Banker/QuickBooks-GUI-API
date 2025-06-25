@@ -248,9 +248,9 @@ class ImageManager:
         """
 
         img_array = numpy.array(image.img)
-        target = numpy.array(color.rgb)
-        lower = numpy.maximum(0, target - tolerance)
-        upper = numpy.minimum(255, target + tolerance)
+        target = numpy.array(color.rgb, dtype=img_array.dtype)
+        lower = numpy.maximum(0, target - tolerance).astype(img_array.dtype)
+        upper = numpy.minimum(255, target + tolerance).astype(img_array.dtype)
 
         mask = cv2.inRange(img_array, lower, upper)
         coords = numpy.argwhere(mask)
@@ -294,8 +294,9 @@ class ImageManager:
         :rtype: List[Image]
         """
         img_array = numpy.array(image.img)
-        lower = numpy.maximum(0, numpy.array(target_color.rgb) - tolerance)
-        upper = numpy.minimum(255, numpy.array(target_color.rgb) + tolerance)
+        target = numpy.array(target_color.rgb, dtype=img_array.dtype)
+        lower = numpy.maximum(0, target - tolerance).astype(img_array.dtype)
+        upper = numpy.minimum(255, target + tolerance).astype(img_array.dtype)
         mask = cv2.inRange(img_array, lower, upper)
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
