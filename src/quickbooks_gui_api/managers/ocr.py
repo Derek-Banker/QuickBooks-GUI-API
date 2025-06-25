@@ -36,7 +36,13 @@ class OCRManager:
         :param config: Extension of pytesseract's config parameter.
         :type config: str = ""
         """
-        return ""
+        try:
+            text = pytesseract.image_to_string(image.img, config=config)
+            self.logger.debug("Extracted text: %s", text)
+            return text
+        except Exception as e:
+            self.logger.error("OCR failed: %s", e)
+            raise
     
     def get_multi_text(
             self, 
@@ -51,7 +57,10 @@ class OCRManager:
         :param config: Extension of pytesseract's config parameter.
         :type config: str = ""
         """
-
-    
-    
-
+        results: Dict[Image, str] = {}
+        for img in images:
+            try:
+                results[img] = self.get_text(img, config=config)
+            except Exception:
+                results[img] = ""
+        return results
