@@ -5,8 +5,8 @@ from pathlib import Path
 
 from typing import List, Dict, Any, overload, Final
 
-from ..managers import WindowManager, ImageManager, OCRManager, StringManager
-from ..models import Invoice, Image, Window
+from quickbooks_gui_api.managers import WindowManager, ImageManager, OCRManager, StringManager
+from quickbooks_gui_api.models import Invoice, Image, Window
 
 from src.quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
