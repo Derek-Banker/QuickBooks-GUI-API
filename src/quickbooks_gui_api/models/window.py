@@ -20,7 +20,7 @@ class Window:
     ) -> None:
         """Create a :class:`Window` model instance."""
 
-        self._name: str = name
+        self._name: str = name  
         self._position_x: int = position[0]
         self._position_y: int = position[1]
         self._width: int = size[0]
@@ -77,7 +77,7 @@ class Window:
         return f"Window(name={self._name!r}, position={self.position}, size={self.size})"
 
     @classmethod
-    def from_pywinauto(cls, wrapper: Any, parent: Window | None = None) -> "Window":
+    def from_pywinauto(cls, wrapper: Any, parent: Window | None = None) -> Window:
         """Create a :class:`Window` model from a pywinauto wrapper object."""
         rect = wrapper.rectangle()
         return cls(

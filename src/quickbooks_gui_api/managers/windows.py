@@ -4,7 +4,8 @@ import logging
 
 from pywinauto import Application, Desktop
 from pywinauto import keyboard, mouse
-from typing import List, Tuple, Any
+import pyautogui
+from typing import List, Tuple, overload
 import time
 
 from quickbooks_gui_api.models import Window
@@ -77,8 +78,8 @@ class WindowManager:
     def wait_for_window(
         self,
         title: str,
-        timeout: float = 10.0,
-        poll_interval: float = 0.1,
+        timeout: float = 5.0,
+        poll_interval: float = 0.2,
         *,
         raise_on_timeout: bool = True,
     ) -> Window | None:
@@ -87,13 +88,16 @@ class WindowManager:
         Polls the desktop until a window with ``title`` is found or ``timeout``
         seconds have elapsed.
 
-        :param title: Title of the desired window.
-        :param timeout: Maximum seconds to wait.
-        :param poll_interval: Interval between polling attempts.
-        :param raise_on_timeout: When ``True`` a :class:`WindowNotFound` is
-            raised if the window is not found.
-        :returns: A :class:`Window` instance or ``None`` if ``raise_on_timeout``
-            is ``False`` and no window is found.
+        :param  title:              Title of the desired window.
+        :type   title:              str  
+        :param  timeout:            Maximum seconds to wait.
+        :type   timeout:            float = 5.0
+        :param  poll_interval:      Interval between polling attempts.
+        :type   poll_interval:      float = 0.2
+        :param  raise_on_timeout:   When ``True`` a :class:`WindowNotFound` is raised if the window is not found.
+        :type   raise_on_timeout:   bool = True
+
+        :returns: A :class:`Window` instance or ``None`` if ``raise_on_timeout`` is ``False`` and no window is found.
         :raises WindowNotFound: If the window is not located in time.
         """
 
@@ -155,8 +159,8 @@ class WindowManager:
         """
         Returns a list of :class:`Window` instances for all dialogs.
 
-        :param filter: Limits the return for only dialogs open under that window.
-        :type filter: Window | None = None
+        :param  filter: Limits the return for only dialogs open under that window.
+        :type   filter: Window | None = None
         """
         dialogs: List[Window] = []
         if filter is not None:
@@ -178,8 +182,8 @@ class WindowManager:
         """
         If the provided :py:class:`Window` instance represents a top level window.
 
-        :param window: The window model instance to examine.
-        :type window: Window
+        :param  window: The window model instance to examine.
+        :type   window: Window
         """
         try:
             wrapper = self.desktop.window(title=window.name)
@@ -191,8 +195,8 @@ class WindowManager:
         """
         If the provided :class:`Window` instance represents a dialog.
 
-        :param window: The window model instance to examine.
-        :type window: Window
+        :param  window: The window model instance to examine.
+        :type   window: Window
         """
         try:
             wrapper = self.desktop.window(title=window.name)
@@ -204,8 +208,8 @@ class WindowManager:
         """
         If the provided :class:`Window` instance is currently focused.
 
-        :param window: The window model instance to examine.
-        :type window: Window
+        :param  window: The window model instance to examine.
+        :type   window: Window
         """
         try:
             active = self.desktop.get_active()
@@ -236,43 +240,99 @@ class WindowManager:
     #     :type retries:
     #     """
     
+    @overload
+    def send_input(
+            self,
+            keys: str | List[str] | None = None,
+            *,
+            send_count: int = 1,
+            delay: float = 0,
+        ) -> None:...
+
+    @overload
+    def send_input(
+            self,
+            *,
+            string: str | None = None,
+            char_at_a_time: bool = False,
+            delay: float = 0,
+        ) -> None:...
+
 
     def send_input(
-        self,
-        *,
-        keys: List[str] | None = None,
-        string: str | None = None,
-        send_count: int = 1,
-        char_at_a_time: bool = False,
-        delay: float = 0,
-    ) -> None:
+            self,
+            keys: str | List[str] | None = None,
+            *,
+            string: str | None = None,
+            send_count: int = 1,
+            char_at_a_time: bool = False,
+            delay: float = 0.0,
+        ) -> None:
         """Send keyboard input to the active window.
 
-        :param keys: List of keys to send simultaneously as a hotkey.
-        :param string: Optional string to type/paste.
-        :param send_count: Number of times to repeat the send.
-        :param char_at_a_time: When ``True`` characters of ``string`` are sent
-            individually.
-        :param delay: Delay between repeated sends.
-        :raises ValueError: If neither ``keys`` nor ``string`` is provided.
+        :param  keys:           Individual keys or hotkeys to press.
+                                If a nested list is passed, each sublist will be treated as a batch and delay will be used in-between each.
+        :type   keys:           str | List[str] | None = None
+        :param  string:         Optional string to type/paste.
+        :type   string:         str | None = None
+        :param  send_count:     Number of times to repeat the send.
+        :type   send_count:     int = 1
+        :param  char_at_a_time: When ``True`` characters of ``string`` are sent individually.
+        :param  delay:          Delay between repeated sends or batches.
+        :type   delay:          float = 0.0 
+        :raises ValueError:     If neither ``keys`` nor ``string`` is provided.
         """
-
         if keys is None and string is None:
-            raise ValueError("Either 'keys' or 'string' must be provided")
+            raise ValueError("Either 'keys' or 'string' must be provided.")
 
+        # Handle keys
         if keys is not None:
-            sequence = ''.join(f'{{{k}}}' if len(k) > 1 else k for k in keys)
             for _ in range(send_count):
-                keyboard.send_keys(sequence, pause=delay)
+                # Single string (e.g., "enter" or "a")
+                if isinstance(keys, str):
+                    pyautogui.press(keys)
+                # Flat list (e.g., ["ctrl", "a"])
+                elif isinstance(keys, list) and all(isinstance(k, str) for k in keys):
+                    # Send all as a hotkey (simultaneous press)
+                    pyautogui.hotkey(*keys)
+                else:
+                    raise ValueError("Invalid format for 'keys'. Must be str or List[str].")
+                if delay and not (isinstance(keys, list) and all(isinstance(k, list) for k in keys)):
+                    time.sleep(delay)
+            # If keys was provided, don't send string (even if not None)
             return
 
+        # Handle string input
         if string is not None:
             for _ in range(send_count):
                 if char_at_a_time:
                     for char in string:
-                        keyboard.send_keys(char, with_spaces=True, pause=delay)
+                        pyautogui.typewrite(char)
+                        if delay:
+                            time.sleep(delay)
                 else:
-                    keyboard.send_keys(string, with_spaces=True, pause=delay)
+                    pyautogui.typewrite(string)
+                    if delay:
+                        time.sleep(delay)
+
+
+
+    @overload
+    def mouse(
+            self, 
+            x: int | None = None, 
+            y: int | None = None, 
+            *,
+            click: bool = True
+        ) -> None:...
+
+    @overload
+    def mouse(
+            self,
+            *, 
+            position: Tuple[int, int] | None = None,
+            click: bool = True
+        ) -> None:...
 
     def mouse(
             self, 
@@ -283,14 +343,14 @@ class WindowManager:
             click: bool = True
         ) -> None:
         """
-        Move the mouse to ort click at the specified coordinates.
+        Move the mouse to and or click at the specified coordinates.
 
-        :param x: X coordinate to be clicked.  
-        :type x: int | None = None
-        :param y: Y coordinate to be clicked.
-        :type y: int | None = None
-        :param position: Alternative input method, x,y tuple. 
-        :type position: Tuple[int, int] | None = None
+        :param  x:          X coordinate to be clicked.  
+        :type   x:          int | None = None
+        :param  y:          Y coordinate to be clicked.
+        :type   y:          int | None = None
+        :param  position:   Alternative input method, x,y tuple. 
+        :type   position:   Tuple[int, int] | None = None
         """
 
         if position is not None:

@@ -10,9 +10,7 @@ class ManagerException(Exception):
 class WindowFocusFail(ManagerException):
     """A window was unable to be focused"""
     def __init__(self, target: str, current: str) -> None:
-        message = (
-            f"Attempt to focus the window '{target}' failed. The window '{current}' is currently focused."
-        )
+        message = (f"Attempt to focus the window '{target}' failed. The window '{current}' is currently focused.")
         super().__init__(message)
 
 
