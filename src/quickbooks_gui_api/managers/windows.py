@@ -1,4 +1,4 @@
-# src\invoice_saver\tools\window_manager.py
+# src\quickbooks_gui_api\managers\windows.py
 
 import logging
 
