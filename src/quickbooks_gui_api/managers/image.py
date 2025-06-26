@@ -493,3 +493,33 @@ class ImageManager:
         arr = arr.astype('int32')
         target = numpy.array(rgb, dtype='int32')
         return numpy.linalg.norm(arr - target, axis=-1)
+    
+
+    @staticmethod
+    def largest (images: List[Image]) -> Image:
+        """ Given a list of images, returns the one with the largest area. Does not recognize equals. """
+
+        if len(images) == 0:
+            raise ValueError("Invalid parameter: Empty list provided, cannot rank.")
+
+        largest: Image = images[0]    
+        for image in images:
+            if largest.area < image.area:
+                largest = image
+        
+        return largest
+    
+    @staticmethod
+    def smallest (images: List[Image]) -> Image:
+        """ Given a list of images, returns the one with the smallest area. Does not recognize equals. """
+
+        if len(images) == 0:
+            raise ValueError("Invalid parameter: Empty list provided, cannot rank.")
+
+        smallest: Image = images[0]    
+        for image in images:
+            if smallest.area < image.area:
+                smallest = image
+        
+        return smallest 
+    
