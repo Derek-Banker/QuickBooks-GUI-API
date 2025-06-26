@@ -31,6 +31,16 @@ class WindowManager:
         else:
             raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
+    def _get_active_wrapper(self):
+        """Return the currently active window wrapper using any available API."""
+        if hasattr(self.desktop, "get_active"):
+            return self.desktop.get_active()
+        if hasattr(self.desktop, "active_window"):
+            return self.desktop.active_window()
+        if hasattr(self.desktop, "active"):
+            return self.desktop.active()
+        raise AttributeError("No method available to retrieve the active window")
+
 
     def attempt_focus_window(self, window: Window) -> bool:
         """Attempt to focus ``window``.
@@ -50,7 +60,7 @@ class WindowManager:
                 self.desktop.window(title=window.name).set_focus()
             return True
         except Exception as e:  # pragma: no cover - depends on OS specific libs
-            current = self.desktop.get_active().window_text()
+            current = self._get_active_wrapper().window_text()
             self.logger.error(
                 "Failed to focus window '%s'. '%s' is currently focused.",
                 window.name,
@@ -60,7 +70,7 @@ class WindowManager:
         
     def active_window(self) -> Window:
         """Return a :class:`Window` instance for the currently focused window."""
-        active = self.desktop.get_active()
+        active = self._get_active_wrapper()
         return Window.from_pywinauto(active)
 
     
@@ -111,7 +121,7 @@ class WindowManager:
                 pass
             time.sleep(poll_interval)
 
-        focused = self.desktop.get_active().window_text()
+        focused = self._get_active_wrapper().window_text()
         self.logger.error(
             "Timed out waiting for window '%s'. '%s' is focused.", title, focused
         )
@@ -139,7 +149,7 @@ class WindowManager:
                 pass
             time.sleep(poll_interval)
 
-        focused = self.desktop.get_active().window_text()
+        focused = self._get_active_wrapper().window_text()
         self.logger.error(
             "Timed out waiting for dialog '%s'. '%s' is focused.", title, focused
         )
@@ -212,7 +222,7 @@ class WindowManager:
         :type   window: Window
         """
         try:
-            active = self.desktop.get_active()
+            active = self._get_active_wrapper()
             return active.window_text() == window.name
         except Exception:
             return False
