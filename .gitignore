@@ -161,7 +161,5 @@ cython_debug/
 OoO.rb
 old.py
 
-
-bitwarden_sdk-1.0.0-cp312-none-win_amd64.whl
 configs/config.toml
 test-*.png
