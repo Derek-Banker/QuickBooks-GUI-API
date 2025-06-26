@@ -135,15 +135,16 @@ class WindowManager:
         """
         pass
 
-    def click(
+    def mouse(
             self, 
             x: int | None = None, 
             y: int | None = None, 
             *,
-            position: Tuple[int, int] | None = None
+            position: Tuple[int, int] | None = None,
+            click: bool = True
         ) -> None:
         """
-        Mimic a mouse click at the specified coordinates. If no coordinates specified, click, at current position.
+        Move the mouse to ort click at the specified coordinates.
 
         :param x: X coordinate to be clicked.  
         :type x: int | None = None
@@ -160,22 +161,5 @@ class WindowManager:
 
         pass
 
-    def position_mouse(
-           self, 
-            x: int | None = None, 
-            y: int | None = None, 
-            *,
-            position: Tuple[int, int] | None = None
-        ) -> None:
-        """
-        Move mouse to the specified coordinates.
-
-        :param x: X coordinate to be clicked.  
-        :type x: int | None = None
-        :param y: Y coordinate to be clicked.
-        :type y: int | None = None
-        :param position: Alternative input method, x,y tuple. 
-        :type position: Tuple[int, int] | None = None
-        """
 
     
