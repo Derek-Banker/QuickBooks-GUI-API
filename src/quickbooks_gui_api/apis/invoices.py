@@ -54,7 +54,7 @@ class Invoices:
         
         self.application = application
 
-        self.window_man = WindowManager(self.application)
+        self.window_man = WindowManager(logger=self.logger)
         image_man = ImageManager()
         ocr_man = OCRManager()
             
@@ -108,25 +108,25 @@ class Invoices:
             self.logger.error(error)
             raise error
 
-        window_man  = WindowManager(self.application)
+        window_man  = WindowManager(logger=self.logger)
         image_man   = ImageManager()
         ocr_man     = OCRManager()
         string_man  = StringManager()
 
         window_man.home()
 
-        window_man.send_input(["ctrl", "i"])
+        window_man.send_input(keys=["ctrl", "i"])
 
         def _find_invoice():
-            window_man.send_input(["ctrl", "f"])
+            window_man.send_input(keys=["ctrl", "f"])
             time.sleep(self.DIALOG_LOAD_DELAY)
-            window_man.send_input("tab", 3)
+            window_man.send_input(keys=["tab"], send_count=3)
             window_man.send_input(string=queue[0].number)
-            window_man.send_input(["alt", "d"])
+            window_man.send_input(keys=["alt", "d"])
 
         
         def _print_to_pdf():
-            window_man.send_input(["ctrl","p"])
+            window_man.send_input(keys=["ctrl","p"])
             time.sleep(self.DIALOG_LOAD_DELAY)
             dialog = window_man.active_dialog()
             dialog_capture = image_man.capture(dialog.size, dialog.position)
@@ -134,7 +134,7 @@ class Invoices:
             selected_printer = ocr_man.get_text(isolated_field) \
 
             if string_man.is_match(self.STRING_MATCH_THRESHOLD, input=selected_printer, target=self.VALID_INVOICE_PRINTER):
-                window_man.send_input("enter")
+                window_man.send_input(keys=["enter"])
             else:
                 self.logger.error(InvalidPrinter)
                 raise InvalidPrinter
@@ -152,10 +152,10 @@ class Invoices:
         #         raise InvalidPrinter
 
         def _save_pdf_file():
-            window_man.send_input(['alt','n'])
+            window_man.send_input(keys=['alt','n'])
             abs_path = save_directory.joinpath(queue[0].file_name)
-            window_man.send_input(string = str(abs_path))
-            window_man.send_input(['alt','s'])
+            window_man.send_input(string=str(abs_path))
+            window_man.send_input(keys=['alt','s'])
 
             
         def _handle_unwanted_dialog():
@@ -163,15 +163,15 @@ class Invoices:
             title: str = window_man.active_dialog().name
 
             if title == DATE_ERROR:
-                window_man.send_input('enter')
-                window_man.send_input('esc')
+                window_man.send_input(keys=['enter'])
+                window_man.send_input(keys=['esc'])
                 _find_invoice()
 
             elif title == CREDITS or title == CHANGED_TRANSACTION:
-                window_man.send_input(['alt', 'n'])
+                window_man.send_input(keys=['alt', 'n'])
 
             elif title == OVERWRITE_FILE:
-                window_man.send_input('y')
+                window_man.send_input(keys=['y'])
 
 
         index: int = 0
