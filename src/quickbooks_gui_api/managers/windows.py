@@ -143,7 +143,7 @@ class WindowManager:
             position: Tuple[int, int] | None = None
         ) -> None:
         """
-        Mimic a mouse click at the specified coordinates.
+        Mimic a mouse click at the specified coordinates. If no coordinates specified, click, at current position.
 
         :param x: X coordinate to be clicked.  
         :type x: int | None = None
@@ -153,11 +153,6 @@ class WindowManager:
         :type position: Tuple[int, int] | None = None
         """
 
-        if x is None and y is None and position is None:
-            error = ValueError("All parameters are none. `x` and `y`, or `position` must be provided.")
-            self.logger.error(error)
-            raise error
-
         if position is not None:
             x = position[0]
             y = position[1]
@@ -165,6 +160,22 @@ class WindowManager:
 
         pass
 
+    def position_mouse(
+           self, 
+            x: int | None = None, 
+            y: int | None = None, 
+            *,
+            position: Tuple[int, int] | None = None
+        ) -> None:
+        """
+        Move mouse to the specified coordinates.
 
+        :param x: X coordinate to be clicked.  
+        :type x: int | None = None
+        :param y: Y coordinate to be clicked.
+        :type y: int | None = None
+        :param position: Alternative input method, x,y tuple. 
+        :type position: Tuple[int, int] | None = None
+        """
 
     
