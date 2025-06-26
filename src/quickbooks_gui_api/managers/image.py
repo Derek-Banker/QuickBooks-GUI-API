@@ -325,8 +325,8 @@ class ImageManager:
         :type   target_color:   Color
         :param  end_color:      The color to replace the target with.
         :type   end_color:      Color
-        :param  tolerance:  The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling.
-        :type   tolerance:  float = 0.0
+        :param  tolerance:      The percent variance of color allowed in a sample. Useful for more reliable anti-aliasing and compression handling.
+        :type   tolerance:      float = 0.0
         :param  mode:           If ``whitelist`` only pixels matching
                                 ``target_color`` are replaced. If ``blacklist``
                                 all other pixels are replaced.

@@ -6,7 +6,7 @@ from pywinauto import Application, Desktop
 from pywinauto import keyboard, mouse
 from typing import List, Tuple
 
-from ..models import Window
+from quickbooks_gui_api.models import Window
 
 
 
@@ -127,7 +127,7 @@ class WindowManager:
     @staticmethod
     def is_window(window: Window) -> bool:
         """
-        If the provided window model instance represents a top level window.
+        If the provided :py:class:`Window` instance represents a top level window.
 
         :param window: The window model instance to examine.
         :type window: Window
@@ -141,7 +141,7 @@ class WindowManager:
     @staticmethod
     def is_dialog(window: Window) -> bool:
         """
-        If the provided window model instance represents a dialog.
+        If the provided :class:`Window` instance represents a dialog.
 
         :param window: The window model instance to examine.
         :type window: Window
@@ -155,7 +155,7 @@ class WindowManager:
     @staticmethod    
     def is_focused(window: Window) -> bool:
         """
-        If the provided window model instance is currently focused.
+        If the provided :class:`Window` instance is currently focused.
 
         :param window: The window model instance to examine.
         :type window: Window
