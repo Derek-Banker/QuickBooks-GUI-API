@@ -49,7 +49,7 @@ class Reports:
         
         self.application = application
 
-        self.window_man = WindowManager(self.application)
+        self.window_man = WindowManager(logger=self.logger)
         image_man = ImageManager()
         ocr_man = OCRManager()
             
@@ -101,7 +101,7 @@ class Reports:
             self.logger.error(error)
             raise error
 
-        window_man  = WindowManager(self.application)
+        window_man  = WindowManager(logger=self.logger)
         image_man   = ImageManager()
         ocr_man     = OCRManager()
         string_man  = StringManager()
@@ -110,9 +110,9 @@ class Reports:
 
         
         def _memorized_reports():
-            window_man.send_input(['alt', 'R'])
-            window_man.send_input('z')
-            window_man.send_input('enter')
+            window_man.send_input(keys=['alt', 'R'])
+            window_man.send_input(string='z')
+            window_man.send_input(keys=['enter'])
         
         def _find_report():
             report_name = queue[0].name 
@@ -120,25 +120,25 @@ class Reports:
 
             for i in range(length):
                 char = report_name[i]
-                window_man.send_input(char)
+                window_man.send_input(string=char)
 
         def _save_as_new_worksheet():
-            window_man.send_input(['alt', 'x'])
-            window_man.send_input(['alt', 'n'])
+            window_man.send_input(keys=['alt', 'x'])
+            window_man.send_input(keys=['alt', 'n'])
 
         def _save_as_csv():
-            window_man.send_input('down', 3)
-            window_man.send_input('space')
-            window_man.send_input(['alt', 'x'])
+            window_man.send_input(keys=['down'], send_count=3)
+            window_man.send_input(keys=['space'])
+            window_man.send_input(keys=['alt', 'x'])
 
         def _save_file():
-            window_man.send_input(['alt','n'])
+            window_man.send_input(keys=['alt','n'])
             abs_path = save_directory.joinpath(queue[0].file_name)
             window_man.send_input(string = str(abs_path))
-            window_man.send_input(['alt','s'])
+            window_man.send_input(keys=['alt','s'])
 
         def _close_report():
-            window_man.send_input('esc')
+            window_man.send_input(keys=['esc'])
 
 
         _memorized_reports()
