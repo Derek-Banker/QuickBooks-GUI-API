@@ -1,16 +1,20 @@
 # src\quickbooks_gui_api\managers\windows.py
 
 import logging
-
-from pywinauto import Application, Desktop
-from pywinauto import keyboard, mouse
-import pyautogui
-from typing import List, Tuple, overload
 import time
+import win32gui
+import win32con
+import pyautogui
+import pywinauto.mouse
+import pywinauto.timings
+import win32gui
+
+from pywinauto import Application, WindowSpecification
+from pywinauto.controls.uiawrapper import UIAWrapper
+from typing import List, Tuple, overload, Literal, Dict, Any, Set
 
 from quickbooks_gui_api.models import Window
-from .manager_exceptions import WindowFocusFail, WindowNotFound
-
+from quickbooks_gui_api.managers.manager_exceptions import WindowFocusFail, WindowNotFound
 
 
 class WindowManager:
@@ -22,7 +26,7 @@ class WindowManager:
     
 
     def __init__(self, logger: logging.Logger | None = None) -> None:
-        self.desktop = Desktop(backend="uia")
+        self.desktop = pywinauto.Desktop (backend="uia")
 
         if logger is None:
             self.logger = logging.getLogger(__name__)
@@ -31,224 +35,105 @@ class WindowManager:
         else:
             raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
-    def _get_active_wrapper(self):
-        """Return the currently active window wrapper using any available API."""
-        if hasattr(self.desktop, "get_active"):
-            return self.desktop.get_active()
-        if hasattr(self.desktop, "active_window"):
-            return self.desktop.active_window()
-        if hasattr(self.desktop, "active"):
-            return self.desktop.active()
-        raise AttributeError("No method available to retrieve the active window")
 
-
-    def attempt_focus_window(self, window: Window) -> bool:
-        """Attempt to focus ``window``.
-
-        The method queries the Desktop for the provided window and attempts to
-        set focus. On failure the currently focused window title is logged and a
-        :class:`WindowFocusFail` is raised.
-
-        :param window: The window entity to focus.
-        :returns: ``True`` if the focus attempt succeeded.
-        :raises WindowFocusFail: If the focus attempt fails.
+    def get_all_dialog_titles(self, app: Application) -> List[str]:
         """
+        Return every caption of every UIA “Dialog” under `app`.
+        """
+        # 1) Locate and wrap the main window
+        main_spec = app.window(title_re=".*QuickBooks.*")
         try:
-            if window.hwnd:
-                self.desktop.window(handle=window.hwnd).set_focus()
-            else:
-                self.desktop.window(title=window.name).set_focus()
-            return True
-        except Exception as e:  # pragma: no cover - depends on OS specific libs
-            current = self._get_active_wrapper().window_text()
-            self.logger.error(
-                "Failed to focus window '%s'. '%s' is currently focused.",
-                window.name,
-                current,
+            main_wrap: UIAWrapper = (
+                main_spec
+                if isinstance(main_spec, UIAWrapper)
+                else main_spec.wrapper_object()
             )
-            raise WindowFocusFail(window.name, current) from e
-        
-    def active_window(self) -> Window:
-        """Return a :class:`Window` instance for the currently focused window."""
-        active = self._get_active_wrapper()
-        return Window.from_pywinauto(active)
+        except Exception as e:
+            raise RuntimeError(f"Could not wrap main QuickBooks window: {e}")
 
-    
-    def active_dialog(self) -> Window:
-        """Return the active dialog as a :class:`Window` instance."""
-        win = self.active_window()
-        if self.is_dialog(win):
-            return win
-        # fall back to searching all dialogs and returning the focused one
-        for dialog in self.get_all_dialogs():
-            if self.is_focused(dialog):
-                return dialog
-        return win
+        titles: List[str] = []
+        seen = set()
 
-    def wait_for_window(
-        self,
-        title: str,
-        timeout: float = 5.0,
-        poll_interval: float = 0.2,
-        *,
-        raise_on_timeout: bool = True,
-    ) -> Window | None:
-        """Wait for a window to appear.
+        # 2) Include the main window itself *if* it's a Dialog
+        if main_wrap.friendly_class_name() == "Dialog":
+            text = main_wrap.window_text().strip()
+            if text:
+                titles.append(text)
+                seen.add(text)
 
-        Polls the desktop until a window with ``title`` is found or ``timeout``
-        seconds have elapsed.
-
-        :param  title:              Title of the desired window.
-        :type   title:              str  
-        :param  timeout:            Maximum seconds to wait.
-        :type   timeout:            float = 5.0
-        :param  poll_interval:      Interval between polling attempts.
-        :type   poll_interval:      float = 0.2
-        :param  raise_on_timeout:   When ``True`` a :class:`WindowNotFound` is raised if the window is not found.
-        :type   raise_on_timeout:   bool = True
-
-        :returns: A :class:`Window` instance or ``None`` if ``raise_on_timeout`` is ``False`` and no window is found.
-        :raises WindowNotFound: If the window is not located in time.
-        """
-
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                wrapper = self.desktop.window(title=title)
-                if wrapper.exists(timeout=0):
-                    return Window.from_pywinauto(wrapper)
-            except Exception:
-                pass
-            time.sleep(poll_interval)
-
-        focused = self._get_active_wrapper().window_text()
-        self.logger.error(
-            "Timed out waiting for window '%s'. '%s' is focused.", title, focused
-        )
-        if raise_on_timeout:
-            raise WindowNotFound(title)
-        return None
-
-    def wait_for_dialog(
-        self,
-        title: str,
-        timeout: float = 10.0,
-        poll_interval: float = 0.1,
-        *,
-        raise_on_timeout: bool = True,
-    ) -> Window | None:
-        """Wait for a dialog with ``title`` to appear."""
-
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                wrapper = self.desktop.window(title=title)
-                if wrapper.exists(timeout=0) and wrapper.friendly_class_name() == "Dialog":
-                    return Window.from_pywinauto(wrapper)
-            except Exception:
-                pass
-            time.sleep(poll_interval)
-
-        focused = self._get_active_wrapper().window_text()
-        self.logger.error(
-            "Timed out waiting for dialog '%s'. '%s' is focused.", title, focused
-        )
-        if raise_on_timeout:
-            raise WindowNotFound(title)
-        return None
-
-    def get_all_windows(self) -> List[Window]:
-        """Return a list of all top level windows as :class:`Window` objects."""
-        windows: List[Window] = []
-        for win in self.desktop.windows():
+        # 3) Walk all Window controls beneath it
+        for win in main_wrap.descendants(control_type="Window"):
+            # 4) Filter by the friendly class name
             if win.friendly_class_name() != "Dialog":
-                windows.append(Window.from_pywinauto(win))
-        return windows
-            
-    def get_all_dialogs(self, filter: Window | None = None) -> List[Window]:
-        """
-        Returns a list of :class:`Window` instances for all dialogs.
+                continue
+            # 5) Grab its text
+            text = win.window_text().strip()
+            if not text or text in seen:
+                continue
+            titles.append(text)
+            seen.add(text)
 
-        :param  filter: Limits the return for only dialogs open under that window.
-        :type   filter: Window | None = None
-        """
-        dialogs: List[Window] = []
-        if filter is not None:
-            try:
-                app = Application(backend="uia").connect(title=filter.name)
-                candidates = app.windows()
-            except Exception:
-                candidates = []
-        else:
-            candidates = self.desktop.windows()
-
-        for win in candidates:
-            if win.friendly_class_name() == "Dialog":
-                dialogs.append(Window.from_pywinauto(win))
-
-        return dialogs
-
-    def is_window(self, window: Window) -> bool:
-        """
-        If the provided :py:class:`Window` instance represents a top level window.
-
-        :param  window: The window model instance to examine.
-        :type   window: Window
-        """
-        try:
-            wrapper = self.desktop.window(title=window.name)
-            return wrapper.friendly_class_name() != "Dialog"
-        except Exception:
-            return False
-    
-    def is_dialog(self, window: Window) -> bool:
-        """
-        If the provided :class:`Window` instance represents a dialog.
-
-        :param  window: The window model instance to examine.
-        :type   window: Window
-        """
-        try:
-            wrapper = self.desktop.window(title=window.name)
-            return wrapper.friendly_class_name() == "Dialog"
-        except Exception:
-            return False
-
-    def is_focused(self, window: Window) -> bool:
-        """
-        If the provided :class:`Window` instance is currently focused.
-
-        :param  window: The window model instance to examine.
-        :type   window: Window
-        """
-        try:
-            active = self._get_active_wrapper()
-            return active.window_text() == window.name
-        except Exception:
-            return False
-
-    # def window_control(
-    #         self,
-    #         target: str,
-    #         trigger: List[str],
-    #         attempt_focus: bool = True,
-    #         expected_load_time: float = 0,
-    #         retries: int = 0
-    #     ):
-    #     """
+        return titles
         
 
-    #     :param target:
-    #     :type target:
-    #     :param trigger:
-    #     :type trigger:
-    #     :param attempt_focus:
-    #     :type attempt_focus:
-    #     :param expected_load_time:
-    #     :type expected_load_time:
-    #     :param retries:
-    #     :type retries:
-    #     """
+    def is_element_active(
+            self,
+            element: UIAWrapper | WindowSpecification | None = None,
+            *,
+            root: pywinauto.WindowSpecification | None = None,
+            timeout: float = 5,
+            attempt_focus: bool = False,
+            retry_interval: float = 0.5,
+            **child_kwargs: Dict[str, Any],
+        ) -> bool:
+        """
+        Return True only if `element` is present, visible, enabled, and
+        not obscured by any other window.
+
+        You must pass *either*:
+        - `element`: a UIAWrapper (or WindowSpecification) you already have, **or**
+        - `root` + any number of child_window keyword args
+            (e.g. auto_id="foo", control_type="Button", title="OK", etc.)
+        """
+        # 1) resolve element if necessary
+        if element is None:
+            if root is None or not child_kwargs:
+                raise ValueError(
+                    "Must provide either `element` or (`root` + child_window criteria)"
+                )
+            element = root.child_window(**child_kwargs)
+
+        # 2) wait for it to exist, be visible & enabled
+        try:
+            pywinauto.timings.wait_until(
+                timeout,
+                retry_interval,
+                lambda: (
+                    getattr(element, "exists", lambda: True)()  # specs have .exists(); wrappers too
+                    and getattr(element, "is_visible", lambda: True)()
+                    and getattr(element, "is_enabled", lambda: True)()
+                ),
+            )
+        except pywinauto.timings.TimeoutError:
+            return False
+
+        # 3) optionally focus it
+        if attempt_focus:
+            try:
+                element.set_focus()
+            except Exception:
+                pass
+
+        # 4) pick a point in the middle of its bounding rectangle
+        rect = element.rectangle()
+        cx = (rect.left + rect.right) // 2
+        cy = (rect.top + rect.bottom) // 2
+
+        # 5) Win32 hit-test at that point
+        hwnd_at_point = win32gui.WindowFromPoint((cx, cy))
+        return hwnd_at_point == element.handle
+
+
     
     @overload
     def send_input(
@@ -372,7 +257,7 @@ class WindowManager:
 
         coords = (x, y)
         if click:
-            mouse.click(coords=coords)
+            pywinauto.mouse.click(coords=coords)
         else:
-            mouse.move(coords=coords)
+            pywinauto.mouse.move(coords=coords)
     

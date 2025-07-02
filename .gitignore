@@ -163,3 +163,5 @@ old.py
 
 configs/config.toml
 test-*.png
+/diag
+qb_ui_dump.txt
