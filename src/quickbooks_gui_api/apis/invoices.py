@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import List, Dict, Any, overload, Final
 
 from quickbooks_gui_api.managers import WindowManager, ImageManager, OCRManager, StringManager
-from quickbooks_gui_api.models import Invoice, Image, Window
+from quickbooks_gui_api.models import Invoice, Image
 
-from src.quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
+from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
 # Shortened window and dialog names:
 BLANK_INVOICE:          Final[str] = "Create Invoices - Accounts Receivable (Editing Transaction...)"
@@ -20,6 +20,8 @@ OVERWRITE_FILE:         Final[str] = "Confirm Save As"
 DATE_ERROR:             Final[str] = "Warning"
 CREDITS:                Final[str] = "Available Credits"
 CHANGED_TRANSACTION:    Final[str] = "Recording Transaction"
+
+
 
 
 

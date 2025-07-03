@@ -119,7 +119,7 @@ class ImageManager:
         Capture a screenshot of the screen according to the parameters.
 
         :param  size:   Size of the capture region. Origin is top left. 
-        :type   size:   Tuple[int(height), int(width)]
+        :type   size:   Tuple[int(width), int(height)]
         :param  source: Offset of the capture region.
         :type   source: Tuple[int(x), int(y)] = (0, 0)
         """

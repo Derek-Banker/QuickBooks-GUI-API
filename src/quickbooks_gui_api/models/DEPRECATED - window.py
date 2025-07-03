@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from typing import Literal, Any
 
+"""
+NOTICE: 
+This model was deprecated due to pivoting approach. 
+"""
 
 class Window:
     """Represents a generic application window."""

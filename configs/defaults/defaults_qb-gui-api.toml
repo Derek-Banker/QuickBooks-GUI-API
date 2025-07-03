@@ -12,11 +12,9 @@ DIALOG_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
 NAVIGATION_DELAY        = { defaultValue = 0.15, type = "float", min = 0.0 }
 VALID_INVOICE_PRINTER   = { defaultValue = "Microsoft Print to PDF on PORTPROMPT:", type = "str" }
 QB_EXE_PATH             = { defaultValue = "UNINITIALIZED", type = "str" }
+COMPANY_FILE_NAME       = { defaultValue = "UNINITIALIZED", type = "str" }
 
-
-
-
-[secrets]
+["QuickBooksGUIAPI.secrets"]
 SALT        = { defaultValue = "UNINITIALIZED", type = "str" }
 HASH        = { defaultValue = "UNINITIALIZED", type = "str" }
 USERNAME    = { defaultValue = "UNINITIALIZED", type = "str" }

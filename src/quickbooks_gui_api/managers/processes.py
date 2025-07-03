@@ -21,44 +21,44 @@ class ProcessManager:
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
 
-    def is_running(self, *,
+    def is_running(self,
+                   *,
                    name: str | None = None,
-                   path: Path | None = None) -> bool:
+                   path: Path | None = None
+                   ) -> bool:
         """
         Check if any process with the given name or executable path is running.
 
-        :param name: The name of the process to target
-        :type name: str
-        :param location: The path to the process to target.
-        :type location: Path
-
-        :returns: The success status.  
-        :rtype: bool
-
-
-    
+        :param name: The name of the process to target.
+        :param path: The full executable path to target.
+        :returns: True if running, False otherwise.
         """
-        if not name and not path:
-            self.logger.debug("No name or location provided to is_running()")
+        if not (name or path):
+            self.logger.debug("No name or path provided to is_running()")
             return False
 
         name = name.lower() if name else None
-        path = str(path).lower() if path else None
+        path_str = str(path).lower() if path else None
 
-        for process in psutil.process_iter(['name', 'exe']):
-            info = process.info
+        for proc in psutil.process_iter(['name', 'exe']):
             try:
-                if name and info.get('name') and info['name'].lower() == name:
-                    self.logger.debug(f"Found running process by name: {name}")
+                info = proc.info
+                proc_name = info.get('name', '') or ''
+                proc_exe  = info.get('exe', '')  or ''
+
+                if name and proc_name.lower() == name:
+                    self.logger.debug("Found process by name: %s", name)
                     return True
-                if path and info.get('exe') and info['exe'].lower() == path:
-                    self.logger.debug(f"Found running process by path: {path}")
+
+                if path_str and proc_exe.lower() == path_str:
+                    self.logger.debug("Found process by path: %s", path_str)
                     return True
+
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                # process exited or no permission, skip
+                # that process disappeared or we can’t inspect it — skip it
                 continue
 
-        self.logger.debug(f"No matching process found (name={name}, path={path})")
+        self.logger.debug("No matching process found (name=%s, path=%s)", name, path)
         return False
 
     def start(self, location: Path | None) -> bool:

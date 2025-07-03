@@ -90,6 +90,32 @@ class StringManager:
             raise ValueError("Either 'input' and 'target', or 'ranked' must be provided.")
         
         
+    def is_match_in_list(
+            self,
+            target: str,
+            input: List[str],  
+            threshold: float = 100,
+        ) -> bool:
+        """
+        Determines if the similarity between two strings or a ranked match meets a specified threshold.
+    
+        :param target: The target string to compare against.
+        :type target: str | None = None
+        :param threshold: The minimum similarity score required to consider a match. Defaults to 100.
+        :type threshold: float = 100
+        :param input: List of strings to compare against.
+        :type input: str | None = None
+        :returns:  True if the similarity score meets or exceeds the threshold, False otherwise. If 'ranked' is provided, returns the comparison result based on its score.
+        :rtype: bool
+        Raises:
+            ValueError: If neither ('input' and 'target') nor 'ranked' are provided.
+        """
 
+        for string in input:
+            if fuzz.ratio(string, target) >= threshold:
+                return True
+        
+        return False
+    
 
         

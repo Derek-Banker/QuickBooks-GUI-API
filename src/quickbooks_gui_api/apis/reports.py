@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Any, overload, Final
 
 from ..managers import WindowManager, ImageManager, OCRManager, StringManager
-from ..models import Report, Image, Window
+from ..models import Report, Image
 
 from src.quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 

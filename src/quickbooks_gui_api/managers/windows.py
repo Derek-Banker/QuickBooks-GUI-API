@@ -1,20 +1,15 @@
 # src\quickbooks_gui_api\managers\windows.py
 
-import logging
 import time
+import logging
 import win32gui
-import win32con
 import pyautogui
 import pywinauto.mouse
 import pywinauto.timings
-import win32gui
 
-from pywinauto import Application, WindowSpecification
-from pywinauto.controls.uiawrapper import UIAWrapper
-from typing import List, Tuple, overload, Literal, Dict, Any, Set
-
-from quickbooks_gui_api.models import Window
-from quickbooks_gui_api.managers.manager_exceptions import WindowFocusFail, WindowNotFound
+from typing                         import List, Tuple, overload, Dict, Any
+from pywinauto                      import Application, WindowSpecification
+from pywinauto.controls.uiawrapper  import UIAWrapper
 
 
 class WindowManager:
@@ -136,23 +131,9 @@ class WindowManager:
 
     
     @overload
-    def send_input(
-            self,
-            keys: str | List[str] | None = None,
-            *,
-            send_count: int = 1,
-            delay: float = 0,
-        ) -> None:...
-
+    def send_input(self, keys: str | List[str] | None = None, *, send_count: int = 1, delay: float = 0) -> None:...
     @overload
-    def send_input(
-            self,
-            *,
-            string: str | None = None,
-            char_at_a_time: bool = False,
-            delay: float = 0,
-        ) -> None:...
-
+    def send_input(self, *, string: str | None = None, char_at_a_time: bool = False, delay: float = 0) -> None:...
 
     def send_input(
             self,
@@ -213,21 +194,9 @@ class WindowManager:
 
 
     @overload
-    def mouse(
-            self, 
-            x: int | None = None, 
-            y: int | None = None, 
-            *,
-            click: bool = True
-        ) -> None:...
-
+    def mouse(self, x: int | None = None, y: int | None = None, *, click: bool = True) -> None:...
     @overload
-    def mouse(
-            self,
-            *, 
-            position: Tuple[int, int] | None = None,
-            click: bool = True
-        ) -> None:...
+    def mouse(self, *, position: Tuple[int, int] | None = None, click: bool = True) -> None:...
 
     def mouse(
             self, 
