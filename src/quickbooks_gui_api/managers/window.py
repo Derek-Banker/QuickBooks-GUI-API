@@ -3,6 +3,7 @@
 import time
 import logging
 import win32gui
+from ctypes.wintypes import RECT
 import pyautogui
 import pywinauto.mouse
 import pywinauto.timings
@@ -21,14 +22,20 @@ class WindowManager:
     
 
     def __init__(self, logger: logging.Logger | None = None) -> None:
-        self.desktop = pywinauto.Desktop (backend="uia")
-
         if logger is None:
             self.logger = logging.getLogger(__name__)
         elif isinstance(logger, logging.Logger):
             self.logger = logger
         else:
             raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+        
+    @staticmethod
+    def rect_to_size_pos(rect: RECT) -> tuple[tuple[int, int], tuple[int, int]]:
+        """ 
+        Converts the winType RECT into a two size and pos tuples
+        :returns: (int(width), int(height))(size), (int(x), int(y))(pos)
+        """
+        return (rect.width(), rect.height()), (rect.left, rect.top)
 
 
     def get_all_dialog_titles(self, app: Application) -> List[str]:

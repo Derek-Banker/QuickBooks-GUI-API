@@ -1,18 +1,19 @@
 # src\quickbooks_gui_api\gui_api.py
 
 import os
+import time
 import logging
 import pytomlpp
 import toml_init
 from toml_init import EncryptionManager
 from pathlib import Path
 
-from typing import List, Dict, Any, overload, Final
+from typing import Final
 from pywinauto import Application, WindowSpecification
 
 
 # from quickbooks_gui_api.apis import Invoices, Reports
-from quickbooks_gui_api.managers import ImageManager, Color, OCRManager, ProcessManager, WindowManager, StringManager
+from quickbooks_gui_api.managers import ImageManager, Color, OCRManager, ProcessManager, WindowManager, StringManager, Helper
 
 
 COMPANY_NOT_LOADED: Final[str] = "No QuickBooks Company Loaded"
@@ -36,22 +37,45 @@ class QuickBookGUIAPI:
                 self.logger = logger 
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+        
+        self.pro_man = ProcessManager()
+        # self.img_man = ImageManager() 
+        self.str_man = StringManager()
+        self.win_man = WindowManager()
+        # self.ocr_man = OCRManager()
+        self.helper = Helper()
+    
 
     def kill_avatax(self) -> None:
 
-        pass
+        avatax_paths: list[Path] = [
+                                    Path(r"C:\Program Files (x86)\Avalara\AvaTax Adapter\Bin\AvalaraEventCallBack.exe")
+                                   ]
+        
+        for path in avatax_paths:
+            if self.pro_man.is_running(path=path):
+                self.logger.debug("Avatax process running, attempting to terminate process at `%s` ...", path)
+                try:
+                    if not self.pro_man.terminate(location=path):
+                        error = ValueError(f"Unable to terminate Avatax process, `{path}`.")
+                        self.logger.error(error)
+                        raise error
+                except Exception as e:
+                    error = ValueError(f"Error when attempting to terminate Avatax process, `{path}`.")
+                    self.logger.error(error)
+                    raise error
+
 
     def startup(self, 
             config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
             config_file_name: str = DEFAULT_CONFIG_FILE_NAME
-        ):
-        # tuple[Application, WindowSpecification, Dict[str, Any]]
+        ) -> tuple[Application, WindowSpecification]:
 
         toml_init.ConfigManager().initialize()
 
         config = pytomlpp.load(config_directory.joinpath(config_file_name))
         
-        pro_man = ProcessManager()
+        self.kill_avatax()
 
         try:
             exe_path            = config["QuickBooksGUIAPI"]["QB_EXE_PATH"]
@@ -59,12 +83,9 @@ class QuickBookGUIAPI:
         except KeyError:
             self.logger.error("KeyError Raised. These is a problem with the config file.")
             raise
-
-        win_man = WindowManager()
-        str_man = StringManager()
         
         try:
-            qb_app = Application(backend='uia').connect(path='QBW.EXE')
+            qb_app = Application(backend='uia').connect(path=exe_path)
             qb_window = qb_app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
         except Exception as e:
             self.logger.error(e)
@@ -74,44 +95,79 @@ class QuickBookGUIAPI:
 
 
 
-        if str_man.is_match_in_list(COMPANY_NOT_LOADED, win_man.get_all_dialog_titles(qb_app), 95.0):
+        if self.str_man.is_match_in_list(COMPANY_NOT_LOADED, self.win_man.get_all_dialog_titles(qb_app), 95.0):
             qb_window.set_focus()
 
-            img_man = ImageManager()
-            orc_man = OCRManager()
+            
 
             company_file_window = qb_window.child_window(title = "No QuickBooks Company Loaded", auto_id = "65280")
-            win_dim = company_file_window.rectangle()
-    
-            selected_file_img   = img_man.capture((win_dim.width(), win_dim.height()), (win_dim.left, win_dim.top))
-            isolated_regions    = img_man.isolate_multiple_regions(selected_file_img, Color(hex_val="4e9e19"), 5.0, min_area=5000)
-            
-            if len(isolated_regions) > 1:
-                self.logger.error("Isolated regions for selected company file is greater than 1. Unable to accommodate.")
-                raise ValueError
-            
-            selected_file_text = orc_man.get_text(isolated_regions[0])
 
-            if str_man.is_match(90.0, input=selected_file_text, target=company_file_name):
-                self.logger.info(f"ORC'd selected company `{selected_file_text}` file sufficiently matches target `{company_file_name}`.")
-                win_man.send_input("enter")
+            correct_company, selected_company, match_confidence =   self.helper.capture_isolate_ocr_match(
+                                                                        company_file_window, 
+                                                                        single_or_multi="multi", 
+                                                                        color=Color(hex_val="4e9e19"), 
+                                                                        tolerance= 5.0, 
+                                                                        min_area= 5000, 
+                                                                        target_text=company_file_name, 
+                                                                        match_threshold= 90.0
+                                                                    )
+
+            if correct_company:
+                self.logger.info(f"ORC'd selected company `{selected_company}` file sufficiently matches target `{company_file_name}`.")
+                self.win_man.send_input("enter")
+                time.sleep(config["QuickBooksGUIAPI"]["LOGIN_DELAY"])
             else:
-                self.logger.error(f"Unrecognized company file `{selected_file_text}` currently selected. Match confidence is {str_man.match(selected_file_text,company_file_name)} with target `{company_file_name}`.")
+                self.logger.error(f"Unrecognized company file `{selected_company}` currently selected. Match confidence is {match_confidence} with target `{company_file_name}`.")
                 raise ValueError
             
 
+        if self.str_man.is_match_in_list(LOGIN, self.win_man.get_all_dialog_titles(qb_app), 95.0):    
+            import dotenv
 
+            dotenv.load_dotenv()
 
+            try:
+                key = os.getenv("KEY")
+            except KeyError:
+                self.logger.error("KeyError raised when attempting to retrieve environmental variable.")
+                raise KeyError
 
+            try:
+                hash        = config["QuickBooksGUIAPI.secrets"]["HASH"]
+                salt        = config["QuickBooksGUIAPI.secrets"]["SALT"]
+                username    = config["QuickBooksGUIAPI.secrets"]["USERNAME"]
+                password    = config["QuickBooksGUIAPI.secrets"]["PASSWORD"]
+            except KeyError:
+                self.logger.error("KeyError raised when attempting to retrieve `QuickBooksGUIAPI.secrets`. There is a problem with the config file.")
+                raise KeyError
 
-            # selected_file_text = orc_man.get_text(selected_file)
+            enc_man = EncryptionManager()
 
-            # print(selected_file_text)
+            confidential_data = [key, hash, salt, username, password]
 
+            if ("UNINITIALIZED" in confidential_data) or (None in confidential_data) or key is None:
+                error = ValueError("At lease of of the confidential references is `UNINITIALIZED` or `None`.")
+                self.logger.error(error)
+                raise error
+        
+            if enc_man.hash(key,salt) == hash:
+                fer_key = enc_man.derive_key(key,salt)
+                username_decrypted = enc_man.decrypt(username,fer_key) 
+                password_decrypted = enc_man.decrypt(password,fer_key)
 
-        # if str_man.is_match_in_list(LOGIN, win_man.get_all_dialog_titles(qb_app), 95.0):    
-        #     enc_man = EncryptionManager()   
+            else:
+                error = ValueError("The `HASH` value pulled from the config file is not a hash of the `KEY` environmental variable.")
+                self.logger.error(error)
+                raise error
 
+            qb_window.set_focus()
+            self.win_man.send_input(["alt","u"])
+            self.helper.safely_set_text(username_decrypted, root=qb_window, control_type = "Edit", auto_id = "15922") # type: ignore
 
+            self.win_man.send_input(["alt","p"])
+            self.helper.safely_set_text(password_decrypted, root=qb_window, control_type = "Edit", auto_id = "15924") # type: ignore
+            
+            self.win_man.send_input("enter")
+            time.sleep(config["QuickBooksGUIAPI"]["LOGIN_DELAY"])
 
-        # return qb_app, qb_window
+        return qb_app, qb_window

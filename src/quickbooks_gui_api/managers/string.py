@@ -10,7 +10,6 @@ class StringManager:
 
     def __init__(
         self, 
-        config_index: str = "secrets", 
         logger: logging.Logger | None = None
     ) -> None:
         if logger is None:
@@ -19,7 +18,6 @@ class StringManager:
             self.logger = logger
         else:
             raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
-        self.config_index = config_index
 
     def rank_matches(
             self, 

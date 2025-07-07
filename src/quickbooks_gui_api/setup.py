@@ -21,7 +21,7 @@ class Setup:
 
     def __init__(
         self, 
-        config_index: str = "secrets", 
+        config_index: str = "QuickBooksGUIAPI.secrets", 
         logger: logging.Logger | None = None
     ) -> None:
         if logger is None:

@@ -3,8 +3,9 @@
 from .image import ImageManager, Color
 from .ocr import OCRManager
 from .processes import ProcessManager
-from .windows import WindowManager
+from .window import WindowManager
 from .string import StringManager
+from .helper import Helper
 
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
            "ProcessManager",
            "WindowManager",
            "StringManager",
+           "Helper",
           ] 

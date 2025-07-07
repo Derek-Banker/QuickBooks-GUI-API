@@ -10,6 +10,7 @@ STRING_MATCH_THRESHOLD  = { defaultValue = 85.0, type = "float", min = 80.0, max
 WINDOW_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
 DIALOG_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
 NAVIGATION_DELAY        = { defaultValue = 0.15, type = "float", min = 0.0 }
+LOGIN_DELAY             = { defaultValue = 5.0,  type = "float", min = 2.0 }
 VALID_INVOICE_PRINTER   = { defaultValue = "Microsoft Print to PDF on PORTPROMPT:", type = "str" }
 QB_EXE_PATH             = { defaultValue = "UNINITIALIZED", type = "str" }
 COMPANY_FILE_NAME       = { defaultValue = "UNINITIALIZED", type = "str" }
