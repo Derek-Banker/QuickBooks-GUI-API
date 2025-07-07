@@ -24,8 +24,11 @@ main = QuickBookGUIAPI()
 app, window = main.startup()
 main.kill_avatax()
 
-invoice = Invoice("15000","INVOICE - 15000")
+i1 = Invoice("12000","INVOICE - 12000")
+i2 = Invoice("13000","INVOICE - 13000")
+i3 = Invoice("14000","INVOICE - 14000")
+i4 = Invoice("15000","INVOICE - 15000")
 
 invoice_saver = Invoices(app, window)
-invoice_saver.save(invoice,Path(r"C:\Users\Derek\CFS - Derek\Downloads"))
+invoice_saver.save([i1, i2, i3, i4],Path(r"C:\Users\Derek\CFS - Derek\Downloads"))
 
