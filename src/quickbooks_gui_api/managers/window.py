@@ -134,6 +134,34 @@ class WindowManager:
         # 5) Win32 hit-test at that point
         hwnd_at_point = win32gui.WindowFromPoint((cx, cy))
         return hwnd_at_point == element.handle
+    
+    def top_dialog(self, app: Application) -> str:
+        """
+        Return the title of the topmost modal dialog in the given Application.
+        If no dialog is found, returns an empty string.
+        """
+        # Grab whatever window is currently highest in Z-order for this app
+        main_win = app.top_window()
+        wrapper = main_win.wrapper_object()
+
+        def _find_first_dialog(node: UIAWrapper) -> UIAWrapper | None:
+            for child in node.children():
+                try:
+                    # look for a Dialog with non-blank text
+                    if child.friendly_class_name() == "Dialog" and child.window_text().strip():
+                        return child
+                except Exception:
+                    # ignore controls that error out
+                    pass
+
+                # recurse into this child
+                found = _find_first_dialog(child)
+                if found:
+                    return found
+            return None
+
+        dlg = _find_first_dialog(wrapper)
+        return dlg.window_text() if dlg else ""
 
 
     
@@ -173,10 +201,12 @@ class WindowManager:
             for _ in range(send_count):
                 # Single string (e.g., "enter" or "a")
                 if isinstance(keys, str):
+                    self.logger.debug("Sending single key input: `%s`.", keys)
                     pyautogui.press(keys)
                 # Flat list (e.g., ["ctrl", "a"])
                 elif isinstance(keys, list) and all(isinstance(k, str) for k in keys):
                     # Send all as a hotkey (simultaneous press)
+                    self.logger.debug("Sending key input as hotkey: `%s`.", keys)
                     pyautogui.hotkey(*keys)
                 else:
                     raise ValueError("Invalid format for 'keys'. Must be str or List[str].")
@@ -189,11 +219,13 @@ class WindowManager:
         if string is not None:
             for _ in range(send_count):
                 if char_at_a_time:
+                    self.logger.debug("Sending string `%s` char at a time with a delay of `%f`.", string, delay)
                     for char in string:
                         pyautogui.typewrite(char)
                         if delay:
                             time.sleep(delay)
                 else:
+                    self.logger.debug("Sending string `%s` all at once a delay after of `%f`.", string, delay)
                     pyautogui.typewrite(string)
                     if delay:
                         time.sleep(delay)

@@ -9,13 +9,13 @@ from typing import List, Dict, Any, overload, Final
 from pywinauto import Application, WindowSpecification
 
 
-from quickbooks_gui_api.managers import WindowManager, ImageManager, OCRManager, StringManager, ProcessManager, Helper
+from quickbooks_gui_api.managers import WindowManager, ImageManager, Color, OCRManager, StringManager, ProcessManager, Helper
 from quickbooks_gui_api.models import Invoice, Image
 
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
 # Shortened window and dialog names:
-BLANK_INVOICE:          Final[str] = "Create Invoices - Accounts Receivable (Editing Transaction...)"
+BLANK_INVOICE:          Final[str] = "Create Invoices - Accounts Receivable (Editing Transaction...) "
 VIEWING_INVOICE:        Final[str] = "Create Invoices - Accounts Receivable"
 FIND_INVOICE_DIALOG:    Final[str] = "Find Invoices"
 PRINT_INVOICE_DIALOG:   Final[str] = "Print One Invoice"
@@ -89,8 +89,8 @@ class Invoices:
             self.WINDOW_LOAD_DELAY:         float   = config["WINDOW_LOAD_DELAY"]
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
-            self.VALID_INVOICE_PRINTER:     str     = config("VALID_INVOICE_PRINTER")
-            self.STRING_MATCH_THRESHOLD:    float   = config("STRING_MATCH_THRESHOLD") 
+            self.VALID_INVOICE_PRINTER:     str     = config["VALID_INVOICE_PRINTER"]
+            self.STRING_MATCH_THRESHOLD:    float   = config["STRING_MATCH_THRESHOLD"]
             self.HOME_TRIES:                int     = 10
 
         except Exception as e:
@@ -98,8 +98,10 @@ class Invoices:
             raise e
 
     def home(self) -> None:
+        self.window.set_focus()
         counter = self.HOME_TRIES
-        if len(self.win_man.get_all_dialog_titles(self.app)) > 1 and counter > 0:
+        while len(self.win_man.get_all_dialog_titles(self.app)) > 1 and counter > 0:
+            self.logger.debug("More than one dialog window detected, attempting to get to the base level aka 'Home'")
             self.win_man.send_input('esc')
             counter -= 1
             time.sleep(1)
@@ -120,98 +122,134 @@ class Invoices:
             self.logger.debug("List detected. Appending `%i` to queue for processing.", len(invoices))
 
         if save_directory.is_dir():
-            self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...")
+            self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...", save_directory)
         else:
-            error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.") 
+            error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.", save_directory) 
             self.logger.error(error)
             raise error
 
         self.home()
 
-        self.win_man.send_input(keys=["ctrl", "i"])
+        self.window.set_focus()
+        self.win_man.send_input(["ctrl", "i"])
+
+# --- HELPERS START --------------------------------------------------------------------------
 
         def _find_invoice():
+            self.window.set_focus()
+
             self.win_man.send_input(keys=["ctrl", "f"])
-            self.helper.await_element(root = self.window, control_type = "Dialog", title = "Find Invoices", wait_time=self.WINDOW_LOAD_DELAY)
-            self.win_man.send_input(keys=["tab"], send_count=3)
+            find_invoice_dialog = self.window.child_window(control_type = "Dialog", title = FIND_INVOICE_DIALOG)
 
-            try:
-                self.helper.await_element(root = self.window, control_type = "Edit", auto_id = "3636", wait_time=0)
-            except:
+            if self.win_man.is_element_active(find_invoice_dialog, timeout=self.DIALOG_LOAD_DELAY, attempt_focus=True):
+                self.logger.debug("The find_invoice_dialog was found and determined to be active. Proceeding to enter invoice number...")
 
+                # send the initial navigation inputs
+                self.win_man.send_input(keys=["tab"], send_count=3)
 
-            self.win_man.send_input(string=queue[0].number)
-            self.win_man.send_input(keys=["alt", "d"])
+                invoice_number_field = self.window.child_window(control_type = "Edit", title = "3636")
+
+                remaining_attempts = 10
+                # loop until the field is active or attempts run out
+                while not self.win_man.is_element_active(invoice_number_field, timeout= 0.2, retry_interval= 0.1, attempt_focus=True) and remaining_attempts > 0:
+                    self.logger.warning("Unable to initially focus on the invoice number field, reattempting. Attempts remaining `%i`.", remaining_attempts)
+                    self.win_man.send_input('tab')
+                    remaining_attempts -= 1
+
+                self.logger.info("Invoice number field is active, inserting number.")
+                self.win_man.send_input(string=queue[0].number)
+                self.window.child_window(control_type = "Pane", auto_id='51').click_input()
+            else:
+                error = ValueError(f"Unable to ascertain that the find_invoice_dialog is active in the set interval of DIALOG_LOAD_DELAY = `{self.DIALOG_LOAD_DELAY}`.")
+                self.logger.error(error)
+                raise error
 
         
         def _print_to_pdf():
+            self.window.set_focus()
             self.win_man.send_input(keys=["ctrl","p"])
-            time.sleep(self.DIALOG_LOAD_DELAY)
-            dialog = self.win_man.active_dialog()
-            dialog_capture = image_man.capture(dialog.size, dialog.position)
-            isolated_field = image_man.isolate_region(dialog_capture, (78, 158, 25))
-            selected_printer = ocr_man.get_text(isolated_field) \
+            print_invoice_dialog = self.window.child_window(control_type = "Dialog", title = PRINT_INVOICE_DIALOG)
+            if self.win_man.is_element_active(print_invoice_dialog, timeout=self.DIALOG_LOAD_DELAY, attempt_focus=True):
+                self.logger.debug("The print_invoice_dialog was found and determined to be active. Proceeding to verify and select printer...")
 
-            if string_man.is_match(self.STRING_MATCH_THRESHOLD, input=selected_printer, target=self.VALID_INVOICE_PRINTER):
-                self.win_man.send_input(keys=["enter"])
+                valid_printer = self.helper.capture_isolate_ocr_match(
+                                    print_invoice_dialog,
+                                    single_or_multi="single",
+                                    color = Color(hex_val="4e9e19"),
+                                    target_text= self.VALID_INVOICE_PRINTER,
+                                    match_threshold= self.STRING_MATCH_THRESHOLD
+                                )
+
+                if valid_printer:
+                    self.win_man.send_input(keys=["enter"])
+                else:
+                    self.logger.error(InvalidPrinter)
+                    raise InvalidPrinter
+            
             else:
-                self.logger.error(InvalidPrinter)
-                raise InvalidPrinter
-            
-        # def _save_invoice():
-        #     dialog = self.win_man.active_dialog()
-        #     dialog_capture = image_man.capture(dialog.size, dialog.position)
-        #     isolated_field = image_man.isolate_regions(dialog_capture, (78, 158, 25))
-        #     selected_printer = ocr_man.get_text(isolated_field)
-            
-        #     if string_man.is_match(self.STRING_MATCH_THRESHOLD, input=selected_printer, target=self.VALID_INVOICE_PRINTER):
-        #         self.win_man.send_input("enter")
-        #     else:
-        #         self.logger.error(InvalidPrinter)
-        #         raise InvalidPrinter
+                error = ValueError(f"Unable to ascertain that the print_invoice_dialog is active in the set interval of DIALOG_LOAD_DELAY = `{self.DIALOG_LOAD_DELAY}`.")
+                self.logger.error(error)
+                raise error
+
 
         def _save_pdf_file():
-            self.win_man.send_input(keys=['alt','n'])
-            abs_path = save_directory.joinpath(queue[0].file_name)
-            self.win_man.send_input(string=str(abs_path))
-            self.win_man.send_input(keys=['alt','s'])
+            self.window.set_focus()
+            save_file_dialog = self.window.child_window(control_type = "Dialog", title = SAVE_PRINT_AS)
+            if self.win_man.is_element_active(save_file_dialog, timeout=self.DIALOG_LOAD_DELAY, attempt_focus=True):
+
+                file_name_field = self.window.child_window(control_type = "Edit", auto_id= '1001')
+
+                abs_path = save_directory.joinpath(queue[0].file_name)
+                self.helper.safely_set_text(str(abs_path), file_name_field)
+                self.win_man.send_input(['alt','s'])
+            else:
+                error = ValueError(f"Unable to ascertain that the save_file_dialog is active in the set interval of DIALOG_LOAD_DELAY = `{self.DIALOG_LOAD_DELAY}`.")
+                self.logger.error(error)
+                raise error
 
             
         def _handle_unwanted_dialog():
+            self.window.set_focus()
+            top_dialog_title = self.win_man.top_dialog(self.app)
 
-            title: str = self.win_man.active_dialog().name
-
-            if title == DATE_ERROR:
+            if top_dialog_title == DATE_ERROR:
                 self.win_man.send_input(keys=['enter'])
                 self.win_man.send_input(keys=['esc'])
                 _find_invoice()
 
-            elif title == CREDITS or title == CHANGED_TRANSACTION:
+            elif top_dialog_title == CREDITS:
                 self.win_man.send_input(keys=['alt', 'n'])
 
-            elif title == OVERWRITE_FILE:
+            elif top_dialog_title == CHANGED_TRANSACTION:
+                self.win_man.send_input(keys=['alt', 'n'])
+
+            elif top_dialog_title == OVERWRITE_FILE:
                 self.win_man.send_input(keys=['y'])
 
+# --- HELPERS END --------------------------------------------------------------------------
 
         index: int = 0
         while len(queue) != 0:  
-
-            if self.win_man.active_dialog().name == BLANK_INVOICE or self.win_man.active_dialog().name == VIEWING_INVOICE:
+            self.logger.debug("Saving invoice in queue. Current index is `%i`.", index)
+            self.window.set_focus()
+            self.logger.debug("Current top_dialog = `%s`.", self.win_man.top_dialog(self.app))
+            if self.win_man.top_dialog(self.app) == BLANK_INVOICE or self.win_man.top_dialog(self.app) == VIEWING_INVOICE:
                 _find_invoice()
                 _handle_unwanted_dialog()
 
-            if self.win_man.active_dialog().name == VIEWING_INVOICE:
+            if self.win_man.top_dialog(self.app) == VIEWING_INVOICE:
                 _print_to_pdf()
                 _handle_unwanted_dialog()
 
-            # if self.win_man.active_dialog().name == PRINT_INVOICE_DIALOG:
+            # if self.win_man.top_dialog(self.app) == PRINT_INVOICE_DIALOG:
             #     _save_invoice()
             #     _handle_unwanted_dialog()
 
-            if  self.win_man.active_dialog().name == SAVE_PRINT_AS:
+            if  self.win_man.top_dialog(self.app) == SAVE_PRINT_AS:
                 _save_pdf_file()
                 _handle_unwanted_dialog() 
-                queue.remove(queue[0])
+                queue.remove(queue[0]) 
+
 
 
                 

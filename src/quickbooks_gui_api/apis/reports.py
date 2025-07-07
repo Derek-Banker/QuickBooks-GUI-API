@@ -8,7 +8,7 @@ from typing import List, Dict, Any, overload, Final
 from ..managers import WindowManager, ImageManager, OCRManager, StringManager
 from ..models import Report, Image
 
-from src.quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
+from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
 # Shortened window and dialog names:
 REPORT_LIST:        Final[str] = "Memorized Report List"
