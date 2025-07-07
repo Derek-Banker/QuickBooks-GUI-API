@@ -1,3 +1,5 @@
+# src\quickbooks_gui_api\apis\invoices.py
+
 import time
 import logging
 import pytomlpp
@@ -136,7 +138,7 @@ class Invoices:
             try:
                 self.helper.await_element(root = self.window, control_type = "Edit", auto_id = "3636", wait_time=0)
             except:
-                
+
 
             self.win_man.send_input(string=queue[0].number)
             self.win_man.send_input(keys=["alt", "d"])
