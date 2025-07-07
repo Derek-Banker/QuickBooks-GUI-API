@@ -57,8 +57,8 @@ class Helper:
 
         try:
             element.set_focus()
-        except Exception as e:
-            raise e
+        except Exception:
+            pass
 
         size, pos = self.win_man.rect_to_size_pos(element.rectangle())
 
@@ -119,8 +119,8 @@ class Helper:
 
         try:
             element.set_focus()
-        except Exception as e:
-            raise e
+        except Exception:
+            pass
 
         capture = self.capture_element(element)
 
@@ -150,7 +150,7 @@ class Helper:
             *,
             root: WindowSpecification | None = None,
             wait_time: float = 2.0,
-            wait_parameters: str = "enabled",
+            wait_parameters: str = "exists enabled visible ready",
             **child_kwargs: Dict[str, Any],
         ) -> None:
 
@@ -163,8 +163,32 @@ class Helper:
 
         try:
             element.set_focus()
-        except Exception as e:
-            raise e
+        except Exception:
+            pass
         
         element.wait(wait_parameters, timeout=wait_time)
         element.set_text(text)
+
+    def await_element(
+            self,
+            element: WindowSpecification | None = None,
+            *,
+            root: WindowSpecification | None = None,
+            wait_time: float = 2.0,
+            wait_parameters: str = "exists enabled visible ready",
+            **child_kwargs: Dict[str, Any],
+        ) -> None:
+    
+        if element is None:
+            if root is None or not child_kwargs:
+                raise ValueError(
+                    "Must provide either `element` or (`root` + child_window criteria)"
+                )
+            element = root.child_window(**child_kwargs)
+
+        try:
+            element.set_focus()
+        except Exception:
+            pass
+
+        element.wait(wait_parameters, wait_time)

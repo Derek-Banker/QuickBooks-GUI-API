@@ -4,8 +4,10 @@ import pytomlpp
 from pathlib import Path
 
 from typing import List, Dict, Any, overload, Final
+from pywinauto import Application, WindowSpecification
 
-from quickbooks_gui_api.managers import WindowManager, ImageManager, OCRManager, StringManager
+
+from quickbooks_gui_api.managers import WindowManager, ImageManager, OCRManager, StringManager, ProcessManager, Helper
 from quickbooks_gui_api.models import Invoice, Image
 
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
@@ -34,7 +36,8 @@ class Invoices:
 
 
     def __init__(self,
-                 application: Any,
+                 application: Application,
+                 window: WindowSpecification,
                  config_path: Path | None = Path(r"configs\config.toml"),
                  logger: logging.Logger | None = None
                  ) -> None:
@@ -54,11 +57,15 @@ class Invoices:
 
         self.load_config(config_path) 
         
-        self.application = application
+        self.app    = application
+        self.window = window
 
-        self.window_man = WindowManager(logger=self.logger)
-        image_man = ImageManager()
-        ocr_man = OCRManager()
+        # self.pro_man = ProcessManager()
+        self.img_man = ImageManager() 
+        self.str_man = StringManager()
+        self.win_man = WindowManager()
+        self.ocr_man = OCRManager()
+        self.helper = Helper()
             
     def load_config(self, path) -> None:
         if path is None:
@@ -82,11 +89,18 @@ class Invoices:
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
             self.VALID_INVOICE_PRINTER:     str     = config("VALID_INVOICE_PRINTER")
             self.STRING_MATCH_THRESHOLD:    float   = config("STRING_MATCH_THRESHOLD") 
+            self.HOME_TRIES:                int     = 10
 
         except Exception as e:
             self.logger.error(e)
             raise e
 
+    def home(self) -> None:
+        counter = self.HOME_TRIES
+        if len(self.win_man.get_all_dialog_titles(self.app)) > 1 and counter > 0:
+            self.win_man.send_input('esc')
+            counter -= 1
+            time.sleep(1)
 
     def save(
         self, 
@@ -110,88 +124,89 @@ class Invoices:
             self.logger.error(error)
             raise error
 
-        window_man  = WindowManager(logger=self.logger)
-        image_man   = ImageManager()
-        ocr_man     = OCRManager()
-        string_man  = StringManager()
+        self.home()
 
-        window_man.home()
-
-        window_man.send_input(keys=["ctrl", "i"])
+        self.win_man.send_input(keys=["ctrl", "i"])
 
         def _find_invoice():
-            window_man.send_input(keys=["ctrl", "f"])
-            time.sleep(self.DIALOG_LOAD_DELAY)
-            window_man.send_input(keys=["tab"], send_count=3)
-            window_man.send_input(string=queue[0].number)
-            window_man.send_input(keys=["alt", "d"])
+            self.win_man.send_input(keys=["ctrl", "f"])
+            self.helper.await_element(root = self.window, control_type = "Dialog", title = "Find Invoices", wait_time=self.WINDOW_LOAD_DELAY)
+            self.win_man.send_input(keys=["tab"], send_count=3)
+
+            try:
+                self.helper.await_element(root = self.window, control_type = "Edit", auto_id = "3636", wait_time=0)
+            except:
+                
+
+            self.win_man.send_input(string=queue[0].number)
+            self.win_man.send_input(keys=["alt", "d"])
 
         
         def _print_to_pdf():
-            window_man.send_input(keys=["ctrl","p"])
+            self.win_man.send_input(keys=["ctrl","p"])
             time.sleep(self.DIALOG_LOAD_DELAY)
-            dialog = window_man.active_dialog()
+            dialog = self.win_man.active_dialog()
             dialog_capture = image_man.capture(dialog.size, dialog.position)
             isolated_field = image_man.isolate_region(dialog_capture, (78, 158, 25))
             selected_printer = ocr_man.get_text(isolated_field) \
 
             if string_man.is_match(self.STRING_MATCH_THRESHOLD, input=selected_printer, target=self.VALID_INVOICE_PRINTER):
-                window_man.send_input(keys=["enter"])
+                self.win_man.send_input(keys=["enter"])
             else:
                 self.logger.error(InvalidPrinter)
                 raise InvalidPrinter
             
         # def _save_invoice():
-        #     dialog = window_man.active_dialog()
+        #     dialog = self.win_man.active_dialog()
         #     dialog_capture = image_man.capture(dialog.size, dialog.position)
         #     isolated_field = image_man.isolate_regions(dialog_capture, (78, 158, 25))
         #     selected_printer = ocr_man.get_text(isolated_field)
             
         #     if string_man.is_match(self.STRING_MATCH_THRESHOLD, input=selected_printer, target=self.VALID_INVOICE_PRINTER):
-        #         window_man.send_input("enter")
+        #         self.win_man.send_input("enter")
         #     else:
         #         self.logger.error(InvalidPrinter)
         #         raise InvalidPrinter
 
         def _save_pdf_file():
-            window_man.send_input(keys=['alt','n'])
+            self.win_man.send_input(keys=['alt','n'])
             abs_path = save_directory.joinpath(queue[0].file_name)
-            window_man.send_input(string=str(abs_path))
-            window_man.send_input(keys=['alt','s'])
+            self.win_man.send_input(string=str(abs_path))
+            self.win_man.send_input(keys=['alt','s'])
 
             
         def _handle_unwanted_dialog():
 
-            title: str = window_man.active_dialog().name
+            title: str = self.win_man.active_dialog().name
 
             if title == DATE_ERROR:
-                window_man.send_input(keys=['enter'])
-                window_man.send_input(keys=['esc'])
+                self.win_man.send_input(keys=['enter'])
+                self.win_man.send_input(keys=['esc'])
                 _find_invoice()
 
             elif title == CREDITS or title == CHANGED_TRANSACTION:
-                window_man.send_input(keys=['alt', 'n'])
+                self.win_man.send_input(keys=['alt', 'n'])
 
             elif title == OVERWRITE_FILE:
-                window_man.send_input(keys=['y'])
+                self.win_man.send_input(keys=['y'])
 
 
         index: int = 0
         while len(queue) != 0:  
 
-            if window_man.active_dialog().name == BLANK_INVOICE or window_man.active_dialog().name == VIEWING_INVOICE:
+            if self.win_man.active_dialog().name == BLANK_INVOICE or self.win_man.active_dialog().name == VIEWING_INVOICE:
                 _find_invoice()
                 _handle_unwanted_dialog()
 
-            if window_man.active_dialog().name == VIEWING_INVOICE:
+            if self.win_man.active_dialog().name == VIEWING_INVOICE:
                 _print_to_pdf()
                 _handle_unwanted_dialog()
 
-            # if window_man.active_dialog().name == PRINT_INVOICE_DIALOG:
+            # if self.win_man.active_dialog().name == PRINT_INVOICE_DIALOG:
             #     _save_invoice()
             #     _handle_unwanted_dialog()
 
-            if  window_man.active_dialog().name == SAVE_PRINT_AS:
+            if  self.win_man.active_dialog().name == SAVE_PRINT_AS:
                 _save_pdf_file()
                 _handle_unwanted_dialog() 
                 queue.remove(queue[0])
