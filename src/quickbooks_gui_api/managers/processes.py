@@ -61,7 +61,7 @@ class ProcessManager:
         self.logger.debug("No matching process found (name=%s, path=%s)", name, path)
         return False
 
-    def start(self, location: Path | None) -> bool:
+    def start(self, path: Path | None) -> bool:
         """
         Attempts to start the process at the given location.
 
@@ -71,12 +71,12 @@ class ProcessManager:
         :returns: The success status.  
         :rtype: bool        
         """
-        if location is None:
+        if path is None:
             self.logger.error("No location provided to start()")
             return False
 
-        exe = str(location)
-        if not location.exists():
+        exe = str(path)
+        if not path.exists():
             self.logger.error(f"Executable not found: {exe}")
             return False
 
@@ -124,7 +124,7 @@ class ProcessManager:
 
                 found_any = True
                 p = psutil.Process(info['pid'])
-                self.logger.info(f"Terminating PID {p.pid} ({info.get('name')})")
+                self.logger.debug(f"Terminating PID {p.pid} ({info.get('name')})")
                 p.terminate()
                 try:
                     p.wait(timeout=5)

@@ -4,6 +4,9 @@
         "avatax",
         "findwindows",
         "GUIAPI",
+        "QBFDT",
+        "qbhelp",
+        "qbupdate",
         "quickbooks",
         "uiawrapper"
     ],

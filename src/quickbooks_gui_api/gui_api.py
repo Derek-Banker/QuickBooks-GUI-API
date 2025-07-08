@@ -8,12 +8,12 @@ import toml_init
 from toml_init import EncryptionManager
 from pathlib import Path
 
-from typing import Final
+from typing import Final, Any
 from pywinauto import Application, WindowSpecification
 
 
 # from quickbooks_gui_api.apis import Invoices, Reports
-from quickbooks_gui_api.managers import ImageManager, Color, OCRManager, ProcessManager, WindowManager, StringManager, Helper
+from quickbooks_gui_api.managers import Color, ProcessManager, WindowManager, StringManager, Helper
 
 
 COMPANY_NOT_LOADED: Final[str] = "No QuickBooks Company Loaded"
@@ -38,136 +38,217 @@ class QuickBookGUIAPI:
             else:
                 raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
         
-        self.pro_man = ProcessManager()
-        # self.img_man = ImageManager() 
-        self.str_man = StringManager()
-        self.win_man = WindowManager()
-        # self.ocr_man = OCRManager()
+        self.process_manager = ProcessManager()
+        self.string_manager = StringManager()
+        self.window_manager = WindowManager()
         self.helper = Helper()
     
+    def load_config_basic(self,
+            config_directory: Path, 
+            config_file_name: str
+        ) -> dict[str, Any]:
 
-    def kill_avatax(self) -> None:
+        toml_init.ConfigManager().initialize()
+
+        config = pytomlpp.load(config_directory.joinpath(config_file_name))
+
+        try:
+            self.exe_path                   = config["QuickBooksGUIAPI"]["QB_EXE_PATH"]
+            self.company_file_name          = config["QuickBooksGUIAPI"]["COMPANY_FILE_NAME"]
+            self.process_start_delay        = config["QuickBooksGUIAPI"]["PROCESS_START_DELAY"]
+            self.company_file_load_delay    = config["QuickBooksGUIAPI"]["COMPANY_FILE_LOAD_DELAY"]            
+            self.login_delay                = config["QuickBooksGUIAPI"]["LOGIN_DELAY"]
+        except KeyError:
+            e = KeyError("KeyError Raised when attempting to retrieve `QuickBooksGUIAPI` config data. There is a problem with the config file.")
+            self.logger.error(e)
+            raise e
+        
+        return config
+
+    def load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
+        self.logger.info("Attempting to load in sensitive data points in from config...")
+
+        try:
+            key_name   = config["QuickBooksGUIAPI.secrets"]["KEY_NAME"]
+            hash       = config["QuickBooksGUIAPI.secrets"]["HASH"]
+            salt       = config["QuickBooksGUIAPI.secrets"]["SALT"]
+            username   = config["QuickBooksGUIAPI.secrets"]["USERNAME"]
+            password   = config["QuickBooksGUIAPI.secrets"]["PASSWORD"]
+        except KeyError:
+            e = KeyError("KeyError raised when attempting to retrieve `QuickBooksGUIAPI.secrets`. There is a problem with the config file. If you have not already, use setup to set the encrypted secrets.")
+            self.logger.error(e)
+            raise e
+
+        import dotenv
+        dotenv.load_dotenv()
+
+        try:
+            key = os.getenv(key_name)
+        except KeyError:
+            e = KeyError(f"KeyError raised when attempting to the retrieve 'KEY_NAME' environmental variable, set as `{key_name}` in the config file.")
+            self.logger.error(e)
+            raise e
+        
+        confidential_data = [key, hash, salt, username, password]
+
+        if ("UNINITIALIZED" in confidential_data) or (None in confidential_data) or key is None:
+            error = ValueError("At lease one of the confidential references is `UNINITIALIZED` or `None`.")
+            self.logger.error(error)
+            raise error
+
+        em = EncryptionManager()
+
+    
+        if em.hash(key,salt) != hash:
+            error = ValueError(f"The `HASH` value pulled from the config file is not a hash of the `{key_name}` environmental variable.")
+            self.logger.error(error)
+            raise error
+
+        else:
+            self.logger.info("Stored hash matches that of the environment key, proceeding with decryption...")
+            fer_key = em.derive_key(key,salt)
+
+            return em.decrypt(username,fer_key), em.decrypt(password,fer_key)
+        
+    def start_quickbooks(self) -> bool:
+        self.logger.info("Starting QuickBooks if not already running...")
+        
+        if not self.process_manager.is_running(path = Path(self.exe_path)):
+            self.logger.debug("QuickBook was not running. Attempting to start...")
+            try:
+                self.process_manager.start(path = Path(self.exe_path))
+                time.sleep(self.process_start_delay)
+                if self.process_manager.is_running(path = Path(self.exe_path)):
+                    self.logger.debug("Attempt successful.")
+                    return True
+                else:
+                    return False
+            except Exception as e:
+                error = "QuickBooks unable to be started. Error thrown: `%s`",e
+                self.logger.error(error)
+                raise e
+        else:
+            self.logger.debug("QuickBook was already running.")
+            return True
+
+
+
+
+    def kill_avatax(self) -> bool:
+        self.logger.info("Attempting to kill Avalara's Avatax...")
 
         avatax_paths: list[Path] = [
                                     Path(r"C:\Program Files (x86)\Avalara\AvaTax Adapter\Bin\AvalaraEventCallBack.exe")
                                    ]
         
         for path in avatax_paths:
-            if self.pro_man.is_running(path=path):
+            if self.process_manager.is_running(path=path):
                 self.logger.debug("Avatax process running, attempting to terminate process at `%s` ...", path)
                 try:
-                    if not self.pro_man.terminate(location=path):
+                    if not self.process_manager.terminate(location=path):
                         error = ValueError(f"Unable to terminate Avatax process, `{path}`.")
                         self.logger.error(error)
                         raise error
+                    else:
+                        return True
                 except Exception as e:
                     error = ValueError(f"Error when attempting to terminate Avatax process, `{path}`.")
                     self.logger.error(error)
                     raise error
-
-
-    def startup(self, 
-            config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
-            config_file_name: str = DEFAULT_CONFIG_FILE_NAME
-        ) -> tuple[Application, WindowSpecification]:
-
-        toml_init.ConfigManager().initialize()
-
-        config = pytomlpp.load(config_directory.joinpath(config_file_name))
-        
-        self.kill_avatax()
-
+    
+        return False
+    
+    def connect_to_app(self) -> tuple[Application, WindowSpecification]:
+        self.logger.info("Attempting to connect pywinauto to application...")
         try:
-            exe_path            = config["QuickBooksGUIAPI"]["QB_EXE_PATH"]
-            company_file_name   = config["QuickBooksGUIAPI"]["COMPANY_FILE_NAME"]    
-        except KeyError:
-            self.logger.error("KeyError Raised. These is a problem with the config file.")
-            raise
-        
-        try:
-            qb_app = Application(backend='uia').connect(path=exe_path)
-            qb_window = qb_app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
+            app = Application(backend='uia').connect(path=self.exe_path)
+            window = app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
         except Exception as e:
             self.logger.error(e)
             raise e
 
+        return app, window
 
+    
+    def select_company_file(self, window: WindowSpecification) -> None:
+        self.logger.info("Company file selection step detected...")
+        window.set_focus()
 
+        company_file_window = window.child_window(title = "No QuickBooks Company Loaded", auto_id = "65280")
 
+        correct_company, selected_company, match_confidence =   self.helper.capture_isolate_ocr_match(
+                                                                    company_file_window, 
+                                                                    single_or_multi="multi", 
+                                                                    color=Color(hex_val="4e9e19"), 
+                                                                    tolerance= 5.0, 
+                                                                    min_area= 5000, 
+                                                                    target_text=self.company_file_name, 
+                                                                    match_threshold= 90.0
+                                                                )
 
-        if self.str_man.is_match_in_list(COMPANY_NOT_LOADED, self.win_man.get_all_dialog_titles(qb_app), 95.0):
-            qb_window.set_focus()
+        if correct_company:
+            self.logger.info(f"ORC'd selected company `{selected_company}` file sufficiently matches target `{self.company_file_name}`.")
+            self.window_manager.send_input("enter")
+            time.sleep(self.company_file_load_delay)
+        else:
+            self.logger.error(f"Unrecognized company file `{selected_company}` currently selected. Match confidence is {match_confidence} with target `{self.company_file_name}`.")
+            raise ValueError
 
+    def login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
+            self.logger.info("User login step detected...")
+            username, password = self.load_config_sensitive(config)
+
+            window.set_focus()
+            self.window_manager.send_input(["alt","u"])
+            self.helper.safely_set_text(username, root=window, control_type = "Edit", auto_id = "15922") # type: ignore
+
+            self.window_manager.send_input(["alt","p"])
+            self.helper.safely_set_text(password, root=window, control_type = "Edit", auto_id = "15924") # type: ignore
             
+            self.window_manager.send_input("enter")
+            time.sleep(self.login_delay)
 
-            company_file_window = qb_window.child_window(title = "No QuickBooks Company Loaded", auto_id = "65280")
+    def startup(self, 
+            config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
+            config_file_name: str = DEFAULT_CONFIG_FILE_NAME,
+            fuck_avatax: bool = True
+        ) -> tuple[Application, WindowSpecification]:
+        self.logger.info("Entering startup routine...")
 
-            correct_company, selected_company, match_confidence =   self.helper.capture_isolate_ocr_match(
-                                                                        company_file_window, 
-                                                                        single_or_multi="multi", 
-                                                                        color=Color(hex_val="4e9e19"), 
-                                                                        tolerance= 5.0, 
-                                                                        min_area= 5000, 
-                                                                        target_text=company_file_name, 
-                                                                        match_threshold= 90.0
-                                                                    )
+        config = self.load_config_basic(config_directory, config_file_name)
 
-            if correct_company:
-                self.logger.info(f"ORC'd selected company `{selected_company}` file sufficiently matches target `{company_file_name}`.")
-                self.win_man.send_input("enter")
-                time.sleep(config["QuickBooksGUIAPI"]["LOGIN_DELAY"])
-            else:
-                self.logger.error(f"Unrecognized company file `{selected_company}` currently selected. Match confidence is {match_confidence} with target `{company_file_name}`.")
-                raise ValueError
+        self.start_quickbooks()
+
+        app, window = self.connect_to_app()
+
+        if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
+           self.select_company_file(window)
             
+        if self.string_manager.is_match_in_list(LOGIN, self.window_manager.get_all_dialog_titles(app), 95.0):    
+            self.login(window, config)
 
-        if self.str_man.is_match_in_list(LOGIN, self.win_man.get_all_dialog_titles(qb_app), 95.0):    
-            import dotenv
-
-            dotenv.load_dotenv()
-
-            try:
-                key = os.getenv("KEY")
-            except KeyError:
-                self.logger.error("KeyError raised when attempting to retrieve environmental variable.")
-                raise KeyError
-
-            try:
-                hash        = config["QuickBooksGUIAPI.secrets"]["HASH"]
-                salt        = config["QuickBooksGUIAPI.secrets"]["SALT"]
-                username    = config["QuickBooksGUIAPI.secrets"]["USERNAME"]
-                password    = config["QuickBooksGUIAPI.secrets"]["PASSWORD"]
-            except KeyError:
-                self.logger.error("KeyError raised when attempting to retrieve `QuickBooksGUIAPI.secrets`. There is a problem with the config file.")
-                raise KeyError
-
-            enc_man = EncryptionManager()
-
-            confidential_data = [key, hash, salt, username, password]
-
-            if ("UNINITIALIZED" in confidential_data) or (None in confidential_data) or key is None:
-                error = ValueError("At lease of of the confidential references is `UNINITIALIZED` or `None`.")
-                self.logger.error(error)
-                raise error
+        if fuck_avatax:
+            self.kill_avatax()
         
-            if enc_man.hash(key,salt) == hash:
-                fer_key = enc_man.derive_key(key,salt)
-                username_decrypted = enc_man.decrypt(username,fer_key) 
-                password_decrypted = enc_man.decrypt(password,fer_key)
+        return app, window
 
-            else:
-                error = ValueError("The `HASH` value pulled from the config file is not a hash of the `KEY` environmental variable.")
-                self.logger.error(error)
-                raise error
+    def shutdown(self) -> None:
+        self.logger.info("Entering shutdown routine...")
 
-            qb_window.set_focus()
-            self.win_man.send_input(["alt","u"])
-            self.helper.safely_set_text(username_decrypted, root=qb_window, control_type = "Edit", auto_id = "15922") # type: ignore
-
-            self.win_man.send_input(["alt","p"])
-            self.helper.safely_set_text(password_decrypted, root=qb_window, control_type = "Edit", auto_id = "15924") # type: ignore
-            
-            self.win_man.send_input("enter")
-            time.sleep(config["QuickBooksGUIAPI"]["LOGIN_DELAY"])
-
-        return qb_app, qb_window
+        process_list: list[str] = [
+                                   "QBW.EXE", 
+                                   "qbw32.exe", 
+                                   "qbupdate.exe",
+                                   "qbhelp.exe", 
+                                   "QBUpdateService.exe",
+                                   "QBFDT.exe",
+                                  ]
+        
+        for process in process_list:
+            try:
+                self.process_manager.terminate(name= process)
+            except Exception:
+                self.logger.exception(f"Error occurred while attempting to terminate the following process: `{process}`.")
+                continue
+       
+        self.logger.info("All provided processes have been terminated.")
