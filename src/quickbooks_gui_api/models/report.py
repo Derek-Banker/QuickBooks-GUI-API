@@ -19,3 +19,5 @@ class Report:
     @property
     def file_name(self) -> str:
         return self._file_name
+
+    

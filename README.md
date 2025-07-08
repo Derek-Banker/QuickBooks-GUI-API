@@ -17,6 +17,3 @@ qb-cli setup set-credentials --username USER --password PASS \
        (--local-key-name NAME | --local-key-value VALUE) [--config-path PATH]
 qb-cli setup verify-credentials (--local-key-name NAME | --local-key-value VALUE)
 ```
-
-The old `setup_cli.py` entry point now simply forwards to this unified CLI for
-backwards compatibility.
