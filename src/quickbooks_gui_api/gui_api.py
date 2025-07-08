@@ -191,7 +191,7 @@ class QuickBookGUIAPI:
 
     def _login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
             self.logger.info("User login step detected...")
-            username, password = self.load_config_sensitive(config)
+            username, password = self._load_config_sensitive(config)
 
             window.set_focus()
             self.window_manager.send_input(["alt","u"])
