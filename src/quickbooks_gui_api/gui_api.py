@@ -25,6 +25,19 @@ DEFAULT_CONFIG_FOLDER_PATH: Final[Path] = cwd.joinpath("configs")
 DEFAULT_CONFIG_DEFAULT_FOLDER_PATH: Final[Path] = DEFAULT_CONFIG_FOLDER_PATH.joinpath("defaults")
 DEFAULT_CONFIG_FILE_NAME: Final[str] = "config.toml"
 
+QUICKBOOKS_PROCESSES:   list[str] = [
+                                     "QBW.EXE", 
+                                     "qbw32.exe", 
+                                     "qbupdate.exe",
+                                     "qbhelp.exe", 
+                                     "QBUpdateService.exe",
+                                     "QBFDT.exe",
+                                    ]
+
+AVATAX_PROCESSES:       list[str] = [
+                                     "AvalaraEventCallBack.exe"
+                                    ]
+
 class QuickBookGUIAPI:
 
     def __init__(self,
@@ -42,8 +55,11 @@ class QuickBookGUIAPI:
         self.string_manager = StringManager()
         self.window_manager = WindowManager()
         self.helper = Helper()
+
+        self.app:       Application
+        self.window:    WindowSpecification
     
-    def load_config_basic(self,
+    def _load_config_basic(self,
             config_directory: Path, 
             config_file_name: str
         ) -> dict[str, Any]:
@@ -65,7 +81,7 @@ class QuickBookGUIAPI:
         
         return config
 
-    def load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
+    def _load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
         self.logger.info("Attempting to load in sensitive data points in from config...")
 
         try:
@@ -110,7 +126,7 @@ class QuickBookGUIAPI:
 
             return em.decrypt(username,fer_key), em.decrypt(password,fer_key)
         
-    def start_quickbooks(self) -> bool:
+    def _start_quickbooks(self) -> bool:
         self.logger.info("Starting QuickBooks if not already running...")
         
         if not self.process_manager.is_running(path = Path(self.exe_path)):
@@ -134,43 +150,22 @@ class QuickBookGUIAPI:
 
 
 
-    def kill_avatax(self) -> bool:
-        self.logger.info("Attempting to kill Avalara's Avatax...")
-
-        avatax_paths: list[Path] = [
-                                    Path(r"C:\Program Files (x86)\Avalara\AvaTax Adapter\Bin\AvalaraEventCallBack.exe")
-                                   ]
-        
-        for path in avatax_paths:
-            if self.process_manager.is_running(path=path):
-                self.logger.debug("Avatax process running, attempting to terminate process at `%s` ...", path)
-                try:
-                    if not self.process_manager.terminate(location=path):
-                        error = ValueError(f"Unable to terminate Avatax process, `{path}`.")
-                        self.logger.error(error)
-                        raise error
-                    else:
-                        return True
-                except Exception as e:
-                    error = ValueError(f"Error when attempting to terminate Avatax process, `{path}`.")
-                    self.logger.error(error)
-                    raise error
+    def _kill_avatax(self) -> None:
+        self._terminate_processes(AVATAX_PROCESSES)
     
-        return False
-    
-    def connect_to_app(self) -> tuple[Application, WindowSpecification]:
+    def _connect_to_app(self) -> tuple[Application, WindowSpecification]:
         self.logger.info("Attempting to connect pywinauto to application...")
         try:
-            app = Application(backend='uia').connect(path=self.exe_path)
-            window = app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
-        except Exception as e:
-            self.logger.error(e)
-            raise e
+            self.app = Application(backend='uia').connect(path=self.exe_path)
+            self.window = self.app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
+        except Exception:
+            self.logger.exception
+            raise
 
-        return app, window
+        return self.app, self.window
 
     
-    def select_company_file(self, window: WindowSpecification) -> None:
+    def _select_company_file(self, window: WindowSpecification) -> None:
         self.logger.info("Company file selection step detected...")
         window.set_focus()
 
@@ -194,7 +189,7 @@ class QuickBookGUIAPI:
             self.logger.error(f"Unrecognized company file `{selected_company}` currently selected. Match confidence is {match_confidence} with target `{self.company_file_name}`.")
             raise ValueError
 
-    def login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
+    def _login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
             self.logger.info("User login step detected...")
             username, password = self.load_config_sensitive(config)
 
@@ -208,43 +203,8 @@ class QuickBookGUIAPI:
             self.window_manager.send_input("enter")
             time.sleep(self.login_delay)
 
-    def startup(self, 
-            config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
-            config_file_name: str = DEFAULT_CONFIG_FILE_NAME,
-            fuck_avatax: bool = True
-        ) -> tuple[Application, WindowSpecification]:
-        self.logger.info("Entering startup routine...")
-
-        config = self.load_config_basic(config_directory, config_file_name)
-
-        self.start_quickbooks()
-
-        app, window = self.connect_to_app()
-
-        if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
-           self.select_company_file(window)
-            
-        if self.string_manager.is_match_in_list(LOGIN, self.window_manager.get_all_dialog_titles(app), 95.0):    
-            self.login(window, config)
-
-        if fuck_avatax:
-            self.kill_avatax()
-        
-        return app, window
-
-    def shutdown(self) -> None:
-        self.logger.info("Entering shutdown routine...")
-
-        process_list: list[str] = [
-                                   "QBW.EXE", 
-                                   "qbw32.exe", 
-                                   "qbupdate.exe",
-                                   "qbhelp.exe", 
-                                   "QBUpdateService.exe",
-                                   "QBFDT.exe",
-                                  ]
-        
-        for process in process_list:
+    def _terminate_processes(self, processes: list[str]) -> None:
+        for process in processes:
             try:
                 self.process_manager.terminate(name= process)
             except Exception:
@@ -252,3 +212,34 @@ class QuickBookGUIAPI:
                 continue
        
         self.logger.info("All provided processes have been terminated.")
+
+    def startup(self, 
+            config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
+            config_file_name: str = DEFAULT_CONFIG_FILE_NAME,
+            fuck_avatax: bool = True
+        ) -> tuple[Application, WindowSpecification]:
+        self.logger.info("Entering startup routine...")
+
+        config = self._load_config_basic(config_directory, config_file_name)
+
+        self._start_quickbooks()
+
+        app, window = self._connect_to_app()
+
+        if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
+           self._select_company_file(window)
+            
+        if self.string_manager.is_match_in_list(LOGIN, self.window_manager.get_all_dialog_titles(app), 95.0):    
+            self._login(window, config)
+
+        if fuck_avatax:
+            self._kill_avatax()
+        
+        return app, window
+
+    def shutdown(self) -> None:
+        self.logger.info("Entering shutdown routine...")
+        
+        self._terminate_processes(QUICKBOOKS_PROCESSES)
+
+    

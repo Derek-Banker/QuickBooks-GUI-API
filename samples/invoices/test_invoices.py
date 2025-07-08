@@ -22,7 +22,7 @@ from quickbooks_gui_api.models import Invoice
 
 main = QuickBookGUIAPI() 
 app, window = main.startup()
-main.kill_avatax()
+main._kill_avatax()
 
 i1 = Invoice("12000","INVOICE - 12000")
 i2 = Invoice("13000","INVOICE - 13000")
