@@ -24,6 +24,7 @@ dependencies    = ["psutil >= 7.0.0",
 # dev = [""]
 
 [project.scripts]
+qb-cli = "quickbooks_gui_api.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
