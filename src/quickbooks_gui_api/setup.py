@@ -73,6 +73,7 @@ class Setup:
         if self.config_index not in data:
             data[self.config_index] = {}
 
+        data[self.config_index]["KEY_NAME"] = local_key_name
         data[self.config_index]["SALT"] = salt
         data[self.config_index]["HASH"] = local_key_hash
         data[self.config_index]["USERNAME"] = em.encrypt(username, fernet_key)

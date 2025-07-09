@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Dict
 
 import logging
-GLOBAL_FMT = "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - line %(lineno)d: %(message)s"
+GLOBAL_FMT = "%(asctime)s | %(levelname)s | %(module)s:%(funcName)s:%(lineno)d | %(message)s"
 logging.basicConfig(
     level    = logging.DEBUG,
     format   = GLOBAL_FMT,
@@ -18,17 +18,37 @@ from quickbooks_gui_api import QuickBookGUIAPI
 from quickbooks_gui_api.apis import Invoices
 from quickbooks_gui_api.models import Invoice
 
-
+invoices: list =    [
+                     1254,
+                     2016,
+                     4313,
+                     7617,
+                     8929,
+                     10226,
+                     15312,
+                     15895,
+                     15898,
+                     15887,
+                     16867,
+                     17185,
+                     17936,
+                     17487,
+                     17575,
+                     17756,
+                     17754,
+                     17718,
+                     17928
+                    ]
 
 main = QuickBookGUIAPI() 
 app, window = main.startup()
 main._kill_avatax()
 
-i1 = Invoice("12000","INVOICE - 12000")
-i2 = Invoice("13000","INVOICE - 13000")
-i3 = Invoice("14000","INVOICE - 14000")
-i4 = Invoice("15000","INVOICE - 15000")
+invoice_objects: List[Invoice] = []
+
+for invoice in invoices:
+    invoice_objects.append(Invoice(str(invoice), None, Path(r"C:\Users\Derek\CFS - Derek\Holding")))
 
 invoice_saver = Invoices(app, window)
-invoice_saver.save([i1, i2, i3, i4],Path(r"C:\Users\Derek\CFS - Derek\Downloads"))
+invoice_saver.save(invoice_objects)
 

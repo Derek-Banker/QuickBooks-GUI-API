@@ -50,14 +50,14 @@ def gui() -> None:
     is_flag=True,
     help="Don't kill Avalara processes after login",
 )
-def startup(config_dir: Path, config_file: str, no_avatax: bool) -> None:
+def startup(config_dir: Path, config_file: str, no_kill_avatax: bool) -> None:
     """Launch QuickBooks, open a company, and log in."""
 
     api = QuickBookGUIAPI()
     api.startup(
         config_directory=config_dir,
         config_file_name=config_file,
-        fuck_avatax=not no_avatax,
+        fuck_avatax=not no_kill_avatax,
     )
 
 
@@ -100,7 +100,7 @@ def setup(ctx: click.Context, log_level: str) -> None:  # pragma: no cover - CLI
 @click.option(
     "--config-index",
     "-c-index",
-    default="secrets",
+    default="QuickBooksGUIAPI.secrets",
     show_default=True,
     help="Config section/table name",
 )
@@ -154,7 +154,7 @@ def set_credentials(
 @click.option(
     "--config-index",
     "-c-index",
-    default="secrets",
+    default="QuickBooksGUIAPI.secrets",
     show_default=True,
     help="Config section/table name",
 )
@@ -166,7 +166,7 @@ def set_credentials_prompt(
     config_path: Path,
     config_index: str,
 ) -> None:
-    """Prompt for credentials and set them in the config file."""
+    """Prompt for credentials and set the config file."""
 
     username = click.prompt("Username")
     password = click.prompt(
@@ -213,7 +213,7 @@ def set_credentials_prompt(
 @click.option(
     "--config-index",
     "-c-index",
-    default="secrets",
+    default="QuickBooksGUIAPI.secrets",
     show_default=True,
     help="Config section/table name",
 )

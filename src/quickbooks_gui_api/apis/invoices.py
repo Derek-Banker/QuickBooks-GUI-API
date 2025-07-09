@@ -109,7 +109,7 @@ class Invoices:
     def save(
         self, 
         invoices: Invoice | List[Invoice],
-        save_directory: Path,
+        # save_directory: Path,
     ) -> None:
 
         queue: List[Invoice] = []
@@ -121,12 +121,12 @@ class Invoices:
             queue = invoices
             self.logger.debug("List detected. Appending `%i` to queue for processing.", len(invoices))
 
-        if save_directory.is_dir():
-            self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...", save_directory)
-        else:
-            error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.", save_directory) 
-            self.logger.error(error)
-            raise error
+        # if save_directory.is_dir():
+        #     self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...", save_directory)
+        # else:
+        #     error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.", save_directory) 
+        #     self.logger.error(error)
+        #     raise error
 
         self.home()
 
@@ -198,8 +198,8 @@ class Invoices:
             file_name_field = self.window.child_window(control_type = "Edit", auto_id= '1001')
             
             if self.win_man.is_element_active(file_name_field, timeout=self.DIALOG_LOAD_DELAY, retry_interval=0.05, attempt_focus=True):
-                abs_path = save_directory.joinpath(queue[0].file_name)
-                self.helper.safely_set_text(str(abs_path), file_name_field)
+                # abs_path = save_directory.joinpath(queue[0].file_name)
+                self.helper.safely_set_text(str(queue[0].export_path()), file_name_field)
                 self.win_man.send_input(['alt','s'])
             else:
                 error = ValueError(f"Unable to ascertain that the save_file_dialog is active in the set interval of DIALOG_LOAD_DELAY = `{self.DIALOG_LOAD_DELAY}`. Current dialog is `{self.win_man.top_dialog(self.app)}`.")

@@ -10,7 +10,7 @@ class Invoice:
                  save_path: Path
                 ) -> None:
         self._number:       str  = number
-        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else number)
+        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else f"{number}.pdf")
         self._save_path:    Path = save_path
         
 
