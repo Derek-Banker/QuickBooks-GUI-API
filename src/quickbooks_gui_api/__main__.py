@@ -31,6 +31,7 @@ def gui() -> None:
 @gui.command()
 @click.option(
     "--config-dir",
+    "-c-dir",
     type=click.Path(path_type=Path),
     default=DEFAULT_CONFIG_FOLDER_PATH,
     show_default=True,
@@ -38,14 +39,16 @@ def gui() -> None:
 )
 @click.option(
     "--config-file",
+    "-c-file",
     default=DEFAULT_CONFIG_FILE_NAME,
     show_default=True,
     help="Name of the TOML file to load",
 )
 @click.option(
-    "--no-avatax",
+    "--no-kill-avatax",
+    "-nka",  
     is_flag=True,
-    help="Don\u2019t kill Avalara processes after login",
+    help="Don't kill Avalara processes after login",
 )
 def startup(config_dir: Path, config_file: str, no_avatax: bool) -> None:
     """Launch QuickBooks, open a company, and log in."""
@@ -61,7 +64,6 @@ def startup(config_dir: Path, config_file: str, no_avatax: bool) -> None:
 @gui.command()
 def shutdown() -> None:
     """Terminate all QuickBooks processes."""
-
     api = QuickBookGUIAPI()
     api.shutdown()
 
@@ -69,6 +71,7 @@ def shutdown() -> None:
 @main.group()
 @click.option(
     "--log-level",
+    "-ll",
     default="INFO",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
     show_default=True,
@@ -82,12 +85,13 @@ def setup(ctx: click.Context, log_level: str) -> None:  # pragma: no cover - CLI
 
 
 @setup.command("set-credentials")
-@click.option("--username", required=True, help="Username to encrypt and store")
-@click.option("--password", required=True, help="Password to encrypt and store")
-@click.option("--local-key-name", default=None, help="Environment variable name for the encryption key")
-@click.option("--local-key-value", default=None, help="Encryption key value (direct input)")
+@click.option("--username", "-u", required=True, help="Username to encrypt and store")
+@click.option("--password", "-p", required=True, help="Password to encrypt and store")
+@click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
+@click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
 @click.option(
     "--config-path",
+    "-c-path",
     type=click.Path(path_type=Path),
     default=Path("configs/config.toml"),
     show_default=True,
@@ -95,6 +99,7 @@ def setup(ctx: click.Context, log_level: str) -> None:  # pragma: no cover - CLI
 )
 @click.option(
     "--config-index",
+    "-c-index",
     default="secrets",
     show_default=True,
     help="Config section/table name",
@@ -113,7 +118,7 @@ def set_credentials(
 
     if (local_key_name is None) == (local_key_value is None):
         raise click.UsageError(
-            "Exactly one of --local-key-name or --local-key-value must be provided."
+            "Exactly one of (--local-key-name | -lkn) or (--local-key-value | -lkv) must be provided."
         )
 
     logging.basicConfig(
@@ -136,10 +141,11 @@ def set_credentials(
 
 
 @setup.command("verify-credentials")
-@click.option("--local-key-name", default=None, help="Environment variable name for the encryption key")
-@click.option("--local-key-value", default=None, help="Encryption key value (direct input)")
+@click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
+@click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
 @click.option(
     "--config-path",
+    "-c-path",
     type=click.Path(path_type=Path),
     default=Path("configs/config.toml"),
     show_default=True,
@@ -147,6 +153,7 @@ def set_credentials(
 )
 @click.option(
     "--config-index",
+    "-c-index",
     default="secrets",
     show_default=True,
     help="Config section/table name",
