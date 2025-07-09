@@ -2,10 +2,13 @@
 
 """Unified command line interface for QuickBooks GUI automation and setup."""
 
-import argparse
+from __future__ import annotations
+
 import logging
 import sys
 from pathlib import Path
+
+import click
 
 from quickbooks_gui_api.gui_api import (
     QuickBookGUIAPI,
@@ -15,133 +18,176 @@ from quickbooks_gui_api.gui_api import (
 from quickbooks_gui_api.setup import Setup
 
 
+@click.group()
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="qb-cli",
-        description="CLI for QuickBooks GUI automation and setup utilities.",
-    )
-    modules = parser.add_subparsers(dest="module", required=True)
+    """CLI for QuickBooks GUI automation and setup utilities."""
 
-    # ------------------------------------------------------------------
-    # GUI automation commands
-    gui = modules.add_parser("gui", help="QuickBooks GUI automation commands")
-    gui_sub = gui.add_subparsers(dest="command", required=True)
 
-    p_start = gui_sub.add_parser(
-        "startup", help="Launch QuickBooks, open a company, and log in"
-    )
-    p_start.add_argument(
-        "--config-dir",
-        type=Path,
-        default=DEFAULT_CONFIG_FOLDER_PATH,
-        help="Where to look for config.toml",
-    )
-    p_start.add_argument(
-        "--config-file",
-        default=DEFAULT_CONFIG_FILE_NAME,
-        help="Name of the TOML file to load",
-    )
-    p_start.add_argument(
-        "--no-avatax",
-        action="store_false",
-        dest="fuck_avatax",
-        help="Don’t kill Avalara processes after login",
-    )
+@main.group()
+def gui() -> None:
+    """QuickBooks GUI automation commands."""
 
-    gui_sub.add_parser("shutdown", help="Terminate all QuickBooks processes")
 
-    # ------------------------------------------------------------------
-    # Setup/credential management commands
-    setup_cmd = modules.add_parser("setup", help="Manage encrypted credentials")
-    setup_sub = setup_cmd.add_subparsers(dest="command", required=True)
+@gui.command()
+@click.option(
+    "--config-dir",
+    type=click.Path(path_type=Path),
+    default=DEFAULT_CONFIG_FOLDER_PATH,
+    show_default=True,
+    help="Where to look for config.toml",
+)
+@click.option(
+    "--config-file",
+    default=DEFAULT_CONFIG_FILE_NAME,
+    show_default=True,
+    help="Name of the TOML file to load",
+)
+@click.option(
+    "--no-avatax",
+    is_flag=True,
+    help="Don\u2019t kill Avalara processes after login",
+)
+def startup(config_dir: Path, config_file: str, no_avatax: bool) -> None:
+    """Launch QuickBooks, open a company, and log in."""
 
-    set_parser = setup_sub.add_parser(
-        "set-credentials", help="Set credentials in the config file"
-    )
-    set_parser.add_argument("--username", required=True, help="Username to encrypt and store")
-    set_parser.add_argument("--password", required=True, help="Password to encrypt and store")
-    group = set_parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--local-key-name", help="Environment variable name for the encryption key")
-    group.add_argument("--local-key-value", help="Encryption key value (direct input)")
-    set_parser.add_argument(
-        "--config-path",
-        type=Path,
-        default=Path("configs/config.toml"),
-        help="Path to config TOML",
-    )
-    set_parser.add_argument(
-        "--config-index",
-        default="secrets",
-        help="Config section/table name",
+    api = QuickBookGUIAPI()
+    api.startup(
+        config_directory=config_dir,
+        config_file_name=config_file,
+        fuck_avatax=not no_avatax,
     )
 
-    verify_parser = setup_sub.add_parser(
-        "verify-credentials", help="Verify credentials using the provided key"
-    )
-    group2 = verify_parser.add_mutually_exclusive_group(required=True)
-    group2.add_argument("--local-key-name", help="Environment variable name for the encryption key")
-    group2.add_argument("--local-key-value", help="Encryption key value (direct input)")
-    verify_parser.add_argument(
-        "--config-path",
-        type=Path,
-        default=Path("configs/config.toml"),
-        help="Path to config TOML",
-    )
-    verify_parser.add_argument(
-        "--config-index",
-        default="secrets",
-        help="Config section/table name",
-    )
 
-    setup_cmd.add_argument(
-        "--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"]
-    )
+@gui.command()
+def shutdown() -> None:
+    """Terminate all QuickBooks processes."""
 
-    args = parser.parse_args()
+    api = QuickBookGUIAPI()
+    api.shutdown()
 
-    if args.module == "gui":
-        api = QuickBookGUIAPI()
-        if args.command == "startup":
-            api.startup(
-                config_directory=args.config_dir,
-                config_file_name=args.config_file,
-                fuck_avatax=args.fuck_avatax,
-            )
-        elif args.command == "shutdown":
-            api.shutdown()
 
-    elif args.module == "setup":
-        logging.basicConfig(
-            level=getattr(logging, args.log_level),
-            format="%(asctime)s - %(levelname)s - %(message)s",
+@main.group()
+@click.option(
+    "--log-level",
+    default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
+    show_default=True,
+)
+@click.pass_context
+def setup(ctx: click.Context, log_level: str) -> None:  # pragma: no cover - CLI
+    """Manage encrypted credentials."""
+
+    ctx.ensure_object(dict)
+    ctx.obj["log_level"] = log_level
+
+
+@setup.command("set-credentials")
+@click.option("--username", required=True, help="Username to encrypt and store")
+@click.option("--password", required=True, help="Password to encrypt and store")
+@click.option("--local-key-name", default=None, help="Environment variable name for the encryption key")
+@click.option("--local-key-value", default=None, help="Encryption key value (direct input)")
+@click.option(
+    "--config-path",
+    type=click.Path(path_type=Path),
+    default=Path("configs/config.toml"),
+    show_default=True,
+    help="Path to config TOML",
+)
+@click.option(
+    "--config-index",
+    default="secrets",
+    show_default=True,
+    help="Config section/table name",
+)
+@click.pass_context
+def set_credentials(
+    ctx: click.Context,
+    username: str,
+    password: str,
+    local_key_name: str | None,
+    local_key_value: str | None,
+    config_path: Path,
+    config_index: str,
+) -> None:
+    """Set credentials in the config file."""
+
+    if (local_key_name is None) == (local_key_value is None):
+        raise click.UsageError(
+            "Exactly one of --local-key-name or --local-key-value must be provided."
         )
-        setup_obj = Setup(config_index=args.config_index)
-        try:
-            if args.command == "set-credentials":
-                setup_obj.set_credentials(
-                    username=args.username,
-                    password=args.password,
-                    local_key_name=args.local_key_name,
-                    local_key_value=args.local_key_value,
-                    config_path=args.config_path,
-                )
-                print("Credentials set successfully.")
-            elif args.command == "verify-credentials":
-                valid = setup_obj.verify_credentials(
-                    local_key_name=args.local_key_name,
-                    local_key_value=args.local_key_value,
-                    config_path=args.config_path,
-                )
-                if valid:
-                    print("Key is valid.")
-                    sys.exit(0)
-                else:
-                    print("Key is INVALID.")
-                    sys.exit(1)
-        except Exception as e:
-            logging.error(f"Operation failed: {e}")
-            sys.exit(2)
+
+    logging.basicConfig(
+        level=getattr(logging, ctx.obj["log_level"]),
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    setup_obj = Setup(config_index=config_index)
+    try:
+        setup_obj.set_credentials(
+            username=username,
+            password=password,
+            local_key_name=local_key_name,
+            local_key_value=local_key_value,
+            config_path=config_path,
+        )
+        click.echo("Credentials set successfully.")
+    except Exception as e:  # pragma: no cover - CLI
+        logging.error(f"Operation failed: {e}")
+        sys.exit(2)
 
 
-if __name__ == "__main__":
+@setup.command("verify-credentials")
+@click.option("--local-key-name", default=None, help="Environment variable name for the encryption key")
+@click.option("--local-key-value", default=None, help="Encryption key value (direct input)")
+@click.option(
+    "--config-path",
+    type=click.Path(path_type=Path),
+    default=Path("configs/config.toml"),
+    show_default=True,
+    help="Path to config TOML",
+)
+@click.option(
+    "--config-index",
+    default="secrets",
+    show_default=True,
+    help="Config section/table name",
+)
+@click.pass_context
+def verify_credentials(
+    ctx: click.Context,
+    local_key_name: str | None,
+    local_key_value: str | None,
+    config_path: Path,
+    config_index: str,
+) -> None:
+    """Verify credentials using the provided key."""
+
+    if (local_key_name is None) == (local_key_value is None):
+        raise click.UsageError(
+            "Exactly one of --local-key-name or --local-key-value must be provided."
+        )
+
+    logging.basicConfig(
+        level=getattr(logging, ctx.obj["log_level"]),
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    setup_obj = Setup(config_index=config_index)
+    try:
+        valid = setup_obj.verify_credentials(
+            local_key_name=local_key_name,
+            local_key_value=local_key_value,
+            config_path=config_path,
+        )
+        if valid:
+            click.echo("Key is valid.")
+            sys.exit(0)
+        else:
+            click.echo("Key is INVALID.")
+            sys.exit(1)
+    except Exception as e:  # pragma: no cover - CLI
+        logging.error(f"Operation failed: {e}")
+        sys.exit(2)
+
+
+if __name__ == "__main__":  # pragma: no cover - CLI
     main()
+
