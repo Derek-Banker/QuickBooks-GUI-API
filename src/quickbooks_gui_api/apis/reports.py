@@ -1,20 +1,28 @@
+
 import time
 import logging
 import pytomlpp
 from pathlib import Path
 
+from dataclasses import dataclass
 from typing import List, Dict, Any, overload, Final
+from pywinauto import Application, WindowSpecification
 
-from ..managers import WindowManager, ImageManager, OCRManager, StringManager
-from ..models import Report, Image
+
+from quickbooks_gui_api.managers import WindowManager, ImageManager, Color, OCRManager, StringManager, ProcessManager, Helper
+from quickbooks_gui_api.models import Report, Image
 
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
+@dataclass
+class element_data(
+                   control_type: Literal["Window","Edit"]     
+                  )
+
 # Shortened window and dialog names:
-REPORT_LIST:        Final[str] = "Memorized Report List"
-SAVE_AS_DATA_FILE:  Final[str] = "Send Report To Excel"
-SAVE_FILE_AS:       Final[str] = "Create Disk File"
-EXPORTING:          Final[str] = "Creating csv"
+MEMORIZED_REPORTS:          Final[str] = "Memorized Report List"
+
+
 
 
 
@@ -27,7 +35,8 @@ class Reports:
 
 
     def __init__(self,
-                 application: Any,
+                 application: Application,
+                 window: WindowSpecification,
                  config_path: Path | None = Path(r"configs\config.toml"),
                  logger: logging.Logger | None = None
                  ) -> None:
@@ -47,11 +56,14 @@ class Reports:
 
         self.load_config(config_path) 
         
-        self.application = application
+        self.app    = application
+        self.window = window
 
-        self.window_man = WindowManager(logger=self.logger)
-        image_man = ImageManager()
-        ocr_man = OCRManager()
+        self.img_man = ImageManager() 
+        self.str_man = StringManager()
+        self.win_man = WindowManager()
+        self.ocr_man = OCRManager()
+        self.helper = Helper()
             
     def load_config(self, path) -> None:
         if path is None:
@@ -73,40 +85,47 @@ class Reports:
             self.WINDOW_LOAD_DELAY:         float   = config["WINDOW_LOAD_DELAY"]
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
+            self.HOME_TRIES:                int     = 10
 
         except Exception as e:
             self.logger.error(e)
             raise e
 
+    def home(self) -> None:
+        self.window.set_focus()
+        counter = self.HOME_TRIES
+        while len(self.win_man.get_all_dialog_titles(self.app)) > 1 and counter > 0:
+            self.logger.debug("More than one dialog window detected, attempting to get to the base level aka 'Home'")
+            self.win_man.send_input('esc')
+            counter -= 1
+            time.sleep(1)
 
     def save(
         self, 
-        invoices: Report | List[Report],
-        save_directory: Path,
+        invoices: Invoice | List[Invoice],
+        # save_directory: Path,
     ) -> None:
 
-        queue: List[Report] = []
+        queue: List[Invoice] = []
 
-        if isinstance(invoices, Report):
+        if isinstance(invoices, Invoice):
             queue.append(invoices)
-            self.logger.debug("Single report detected, appending to queue.")
+            self.logger.debug("Single invoice detected, appending to queue.")
         else:
             queue = invoices
             self.logger.debug("List detected. Appending `%i` to queue for processing.", len(invoices))
 
-        if save_directory.is_dir():
-            self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...")
-        else:
-            error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.") 
-            self.logger.error(error)
-            raise error
+        # if save_directory.is_dir():
+        #     self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...", save_directory)
+        # else:
+        #     error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.", save_directory) 
+        #     self.logger.error(error)
+        #     raise error
 
-        window_man  = WindowManager(logger=self.logger)
-        image_man   = ImageManager()
-        ocr_man     = OCRManager()
-        string_man  = StringManager()
+        self.home()
 
-        window_man.home()
+        self.window.set_focus()
+        self.win_man.send_input(["ctrl", "i"])
 
         
         def _memorized_reports():
