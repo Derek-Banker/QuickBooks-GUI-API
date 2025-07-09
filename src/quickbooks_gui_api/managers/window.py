@@ -85,7 +85,7 @@ class WindowManager:
             root: pywinauto.WindowSpecification | None = None,
             timeout: float = 5,
             attempt_focus: bool = False,
-            retry_interval: float = 0.5,
+            retry_interval: float = 0.25,
             **child_kwargs: Dict[str, Any],
         ) -> bool:
         """
@@ -105,19 +105,48 @@ class WindowManager:
                 )
             element = root.child_window(**child_kwargs)
 
-        # 2) wait for it to exist, be visible & enabled
-        try:
-            pywinauto.timings.wait_until(
-                timeout,
-                retry_interval,
-                lambda: (
-                    getattr(element, "exists", lambda: True)()  # specs have .exists(); wrappers too
+        # 2) obtain a concrete wrapper to avoid repeated lookups
+        if isinstance(element, WindowSpecification):
+            try:
+                element = element.wrapper_object()
+            except Exception:
+                # fall back to waiting if the control isn't ready yet
+                if timeout > 0:
+                    try:
+                        element = element.wait(
+                            "exists visible enabled ready",
+                            timeout=timeout,
+                            retry_interval=retry_interval,
+                        )
+                    except pywinauto.timings.TimeoutError:
+                        return False
+                else:
+                    return False
+        else:
+            if timeout > 0:
+                try:
+                    pywinauto.timings.wait_until(
+                        timeout,
+                        retry_interval,
+                        lambda: (
+                            getattr(element, "exists", lambda: True)()
+                            and getattr(element, "is_visible", lambda: True)()
+                            and getattr(element, "is_enabled", lambda: True)()
+                        ),
+                    )
+                except pywinauto.timings.TimeoutError:
+                    return False
+            else:
+                if not (
+                    getattr(element, "exists", lambda: True)()
                     and getattr(element, "is_visible", lambda: True)()
                     and getattr(element, "is_enabled", lambda: True)()
-                ),
-            )
-        except pywinauto.timings.TimeoutError:
+                ):
+                    return False
+
+        if element is None:
             return False
+
 
         # 3) optionally focus it
         if attempt_focus:

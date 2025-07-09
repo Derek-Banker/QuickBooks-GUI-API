@@ -194,12 +194,13 @@ class Invoices:
 
         def _save_pdf_file():
             self.window.set_focus()
-            save_file_dialog = self.window.child_window(control_type = "Window", title = SAVE_PRINT_AS)
+            # save_file_dialog = self.window.child_window(control_type = "Window", title = SAVE_PRINT_AS) # Throws error, multiple windows share title somehow?
             file_name_field = self.window.child_window(control_type = "Edit", auto_id= '1001')
             
             if self.win_man.is_element_active(file_name_field, timeout=self.DIALOG_LOAD_DELAY, retry_interval=0.05, attempt_focus=True):
                 # abs_path = save_directory.joinpath(queue[0].file_name)
-                self.helper.safely_set_text(str(queue[0].export_path()), file_name_field)
+                self.win_man.send_input(['alt','n'])
+                file_name_field.set_text(str(queue[0].export_path()))
                 self.win_man.send_input(['alt','s'])
             else:
                 error = ValueError(f"Unable to ascertain that the save_file_dialog is active in the set interval of DIALOG_LOAD_DELAY = `{self.DIALOG_LOAD_DELAY}`. Current dialog is `{self.win_man.top_dialog(self.app)}`.")
@@ -255,8 +256,8 @@ class Invoices:
 
             if  self.win_man.top_dialog(self.app) == SAVE_PRINT_AS:
                 _save_pdf_file()
-                queue.remove(queue[0]) 
                 _handle_unwanted_dialog() 
+                queue.remove(queue[0]) 
 
 
 

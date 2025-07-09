@@ -150,7 +150,7 @@ class Helper:
             *,
             root: WindowSpecification | None = None,
             wait_time: float = 2.0,
-            wait_parameters: str = "exists enabled visible ready",
+            # wait_parameters: str = "exists enabled visible ready",
             **child_kwargs: Dict[str, Any],
         ) -> None:
 
@@ -166,8 +166,10 @@ class Helper:
         except Exception:
             pass
         
-        element.wait(wait_parameters, timeout=wait_time)
-        element.set_text(text)
+        if self.win_man.is_element_active(element,timeout= wait_time):
+            element.set_text(text)  
+        else:
+            raise
 
     def await_element(
             self,
