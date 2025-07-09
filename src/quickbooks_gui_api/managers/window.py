@@ -137,33 +137,41 @@ class WindowManager:
     
     def top_dialog(self, app: Application) -> str:
         """
-        Return the title of the topmost modal dialog in the given Application.
-        If no dialog is found, returns an empty string.
+        Return the title of the topmost modal dialog in the given
+        ``Application``.  If no dialog is found an empty string is
+        returned.
         """
-        # Grab whatever window is currently highest in Z-order for this app
-        main_win = app.top_window()
-        wrapper = main_win.wrapper_object()
 
-        def _find_first_dialog(node: UIAWrapper) -> UIAWrapper | None:
+        main_spec = app.window(title_re=".*QuickBooks.*")
+        try:
+            main_wrap: UIAWrapper = (
+                main_spec
+                if isinstance(main_spec, UIAWrapper)
+                else main_spec.wrapper_object()
+            )
+        except Exception as e:
+            raise RuntimeError(f"Could not wrap main QuickBooks window: {e}")
+
+        dialogs: list[tuple[int, UIAWrapper]] = []
+
+        def _collect(node: UIAWrapper, depth: int) -> None:
             for child in node.children():
                 try:
-                    # look for a Dialog with non-blank text
                     if child.friendly_class_name() == "Dialog" and child.window_text().strip():
-                        return child
+                        dialogs.append((depth + 1, child))
                 except Exception:
-                    # ignore controls that error out
                     pass
+                _collect(child, depth + 1)
 
-                # recurse into this child
-                found = _find_first_dialog(child)
-                if found:
-                    return found
-            return None
+        _collect(main_wrap, 0)
 
-        dlg = _find_first_dialog(wrapper)
-        return dlg.window_text() if dlg else ""
+        dialogs.sort(key=lambda t: t[0], reverse=True)
 
+        for _, dlg in dialogs:
+            if self.is_element_active(dlg, timeout=0.2, retry_interval=0.05):
+                return dlg.window_text()
 
+        return dialogs[0][1].window_text() if dialogs else ""
     
     @overload
     def send_input(self, keys: str | List[str] | None = None, *, send_count: int = 1, delay: float = 0) -> None:...

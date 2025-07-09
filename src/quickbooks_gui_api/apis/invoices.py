@@ -208,22 +208,31 @@ class Invoices:
 
             
         def _handle_unwanted_dialog():
-            self.window.set_focus()
+            # time.sleep(self.DIALOG_LOAD_DELAY)
             top_dialog_title = self.win_man.top_dialog(self.app)
 
-            if top_dialog_title == DATE_ERROR:
-                self.win_man.send_input(keys=['enter'])
-                self.win_man.send_input(keys=['esc'])
-                _find_invoice()
+            def focus():
+                self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
+                unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
+                unwanted_dialog.set_focus()    
 
-            elif top_dialog_title == CREDITS:
+            if top_dialog_title == CREDITS:
+                focus()
                 self.win_man.send_input(keys=['alt', 'n'])
 
             elif top_dialog_title == CHANGED_TRANSACTION:
+                focus()
                 self.win_man.send_input(keys=['alt', 'n'])
 
             elif top_dialog_title == OVERWRITE_FILE:
+                focus()
                 self.win_man.send_input(keys=['y'])
+
+
+            # elif top_dialog_title == DATE_ERROR:
+            #     self.win_man.send_input(keys=['enter'])
+            #     self.win_man.send_input(keys=['esc'])
+            #     _find_invoice()
 
 # --- HELPERS END --------------------------------------------------------------------------
 
@@ -244,7 +253,7 @@ class Invoices:
             #     _save_invoice()
             #     _handle_unwanted_dialog()
 
-            if  self.win_man.top_dialog(self.app) == "Printing":
+            if  self.win_man.top_dialog(self.app) == SAVE_PRINT_AS:
                 _save_pdf_file()
                 queue.remove(queue[0]) 
                 _handle_unwanted_dialog() 
