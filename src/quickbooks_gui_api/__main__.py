@@ -140,6 +140,65 @@ def set_credentials(
         sys.exit(2)
 
 
+@setup.command("prompt-credentials")
+@click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
+@click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
+@click.option(
+    "--config-path",
+    "-c-path",
+    type=click.Path(path_type=Path),
+    default=Path("configs/config.toml"),
+    show_default=True,
+    help="Path to config TOML",
+)
+@click.option(
+    "--config-index",
+    "-c-index",
+    default="secrets",
+    show_default=True,
+    help="Config section/table name",
+)
+@click.pass_context
+def set_credentials_prompt(
+    ctx: click.Context,
+    local_key_name: str | None,
+    local_key_value: str | None,
+    config_path: Path,
+    config_index: str,
+) -> None:
+    """Prompt for credentials and set them in the config file."""
+
+    username = click.prompt("Username")
+    password = click.prompt(
+        "Password",
+        hide_input=True,
+        confirmation_prompt=True,
+    )
+
+    if (local_key_name is None) == (local_key_value is None):
+        raise click.UsageError(
+            "Exactly one of (--local-key-name | -lkn) or (--local-key-value | -lkv) must be provided."
+        )
+
+    logging.basicConfig(
+        level=getattr(logging, ctx.obj["log_level"]),
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    setup_obj = Setup(config_index=config_index)
+    try:
+        setup_obj.set_credentials(
+            username=username,
+            password=password,
+            local_key_name=local_key_name,
+            local_key_value=local_key_value,
+            config_path=config_path,
+        )
+        click.echo("Credentials set successfully.")
+    except Exception as e:  # pragma: no cover - CLI
+        logging.error(f"Operation failed: {e}")
+        sys.exit(2)
+
+
 @setup.command("verify-credentials")
 @click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
 @click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
