@@ -17,8 +17,9 @@ classifiers     = ["Programming Language :: Python :: 3",
                   ]
 dependencies    = ["psutil >= 7.0.0",
                    "toml_init >= 0.1.1",
-                   "rapidfuzz >= 3.13.0"
-                  ]
+                    "rapidfuzz >= 3.13.0",
+                    "click >= 8.0"
+                   ]
 
 # [project.optional-dependencies]
 # dev = [""]
