@@ -10,25 +10,33 @@ from pywinauto import Application, WindowSpecification
 
 
 from quickbooks_gui_api.managers import WindowManager, ImageManager, Color, OCRManager, StringManager, ProcessManager, Helper
-from quickbooks_gui_api.models import Report, Image
+from quickbooks_gui_api.models import Report, Image, Element
 
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
 
-@dataclass
-class element_data(
-                   control_type: Literal["Window","Edit"]     
-                  )
 
 # Shortened window and dialog names:
-MEMORIZED_REPORTS:          Final[str] = "Memorized Report List"
+# Element Name                        Control   Title                                           Auto ID
+MEMORIZED_REPORTS_WINDOW    = Element("Window", "Memorized Report List",                        65281)
+REPORT_WINDOW               = Element("Window",  None,                                          65282)
+EXCEL_BUTTON                = Element("Pane",   "Excel",                                        7)
+EXPORT_AS_WINDOW            = Element("Window", "Send Report to Excel",                         None)
+AS_CSV_BUTTON               = Element("Pane",   "Create a comma separated values (.csv) file",  1841)
+SAVE_FILE_AS_WINDOW         = Element("Window", "Create Disk File",                             None)
+FILE_NAME_FIELD             = Element("Edit",   "File name:",                                   1148)
+CANCEL_BUTTON               = Element("Button", "Cancel",                                       2)
 
+CONFIRM_SAVE_AS             = Element("Window", "Confirm Save As",                              None)
+HAVE_ANY_QUESTIONS          = Element("Window", None,                                           "FloatingViewerFrame")
+NEW_FEATURE                 = Element("Pane",  "QB WPF Host",                                   None)
+QUICKBOOKS_PAYMENTS         = Element("Window",'QuickBooks Payments',                           None)
 
 
 
 
 class Reports:
     """
-    Handles the control logic and process for saving invoices
+    Handles the control logic and process for saving reports
     Attributes:
         logger (logging.Logger): Logger instance for logging operations.
     """
@@ -87,9 +95,28 @@ class Reports:
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
             self.HOME_TRIES:                int     = 10
 
+            self.REPORT_NAME_MATCH_THRESHOLD: float   = config["REPORT_NAME_MATCH_THRESHOLD"]
+
         except Exception as e:
             self.logger.error(e)
             raise e
+
+    def _handle_global_popups(self):
+        all_titles = self.win_man.get_all_dialog_titles(self.app)
+
+        if HAVE_ANY_QUESTIONS.title in all_titles:
+            self.logger.debug("Unwanted dialog detected. `%s` Closing...",HAVE_ANY_QUESTIONS.title)
+            HAVE_ANY_QUESTIONS.as_element(self.window).close()
+
+        if NEW_FEATURE.title in all_titles:
+            self.logger.debug("Unwanted dialog detected. `%s` Closing...",NEW_FEATURE.title)
+            NEW_FEATURE.as_element(self.window).set_focus()
+            self.win_man.send_input('enter')
+
+        if QUICKBOOKS_PAYMENTS.title in all_titles:
+            self.logger.debug("Unwanted dialog detected. `%s` Closing...",QUICKBOOKS_PAYMENTS.title)
+            QUICKBOOKS_PAYMENTS.as_element(self.window).set_focus()
+            self.win_man.send_input('esc')
 
     def home(self) -> None:
         self.window.set_focus()
@@ -102,88 +129,129 @@ class Reports:
 
     def save(
         self, 
-        invoices: Invoice | List[Invoice],
+        reports: Report | List[Report],
         # save_directory: Path,
     ) -> None:
 
-        queue: List[Invoice] = []
+        queue: List[Report] = []
 
-        if isinstance(invoices, Invoice):
-            queue.append(invoices)
-            self.logger.debug("Single invoice detected, appending to queue.")
+        if isinstance(reports, Report):
+            queue.append(reports)
+            self.logger.debug("Single report detected, appending to queue.")
         else:
-            queue = invoices
-            self.logger.debug("List detected. Appending `%i` to queue for processing.", len(invoices))
+            queue = reports
+            self.logger.debug("List detected. Appending `%i` to queue for processing.", len(reports))
 
-        # if save_directory.is_dir():
-        #     self.logger.debug("Provided `save_directory`, `%s`, does exist. Proceeding...", save_directory)
-        # else:
-        #     error = ValueError("Provided `save_directory`, `%s`, does NOT exist. Raising value error.", save_directory) 
-        #     self.logger.error(error)
-        #     raise error
-
+        self._handle_global_popups()
         self.home()
 
         self.window.set_focus()
-        self.win_man.send_input(["ctrl", "i"])
 
-        
         def _memorized_reports():
-            window_man.send_input(keys=['alt', 'R'])
-            window_man.send_input(string='z')
-            window_man.send_input(keys=['enter'])
+            self.window.set_focus()
+            self.win_man.send_input(['alt', 'R'])
+            self.win_man.send_input('z')
+            self.win_man.send_input('enter')
         
         def _find_report():
+            self.window.set_focus()
             report_name = queue[0].name 
             length = len(report_name)
 
             for i in range(length):
                 char = report_name[i]
-                window_man.send_input(string=char)
+                self.win_man.send_input(string=char)
+
+            valid_match, pulled_text, match_confidence = self.helper.capture_isolate_ocr_match(
+                self.window,
+                single_or_multi= "single",
+                color= Color(hex_val="4e9e19"),
+                tolerance= 5.0,
+                target_text= report_name,
+                match_threshold= self.REPORT_NAME_MATCH_THRESHOLD
+            )
+
+            if valid_match:
+                self.win_man.send_input(["alt","s"])
+                self.logger.info("The selected report `%s` matched the intended report, `%s`, with a confidence of `%s`.",pulled_text,report_name,match_confidence)
+            else:
+                self.logger.error(f"The selected report, `{pulled_text}`, only matched the intended report, `{report_name}`, with a confidence of `{match_confidence}`. This is below the configured threshold")
 
         def _save_as_new_worksheet():
-            window_man.send_input(keys=['alt', 'x'])
-            window_man.send_input(keys=['alt', 'n'])
+            self.window.set_focus()
+            EXCEL_BUTTON.as_element(self.window).click_input()
+            self.win_man.send_input('n')
 
         def _save_as_csv():
-            window_man.send_input(keys=['down'], send_count=3)
-            window_man.send_input(keys=['space'])
-            window_man.send_input(keys=['alt', 'x'])
+            self.window.set_focus()
+            AS_CSV_BUTTON.as_element(self.window).click_input()
+            self.win_man.send_input(['alt', 'x'])
 
         def _save_file():
-            window_man.send_input(keys=['alt','n'])
-            abs_path = save_directory.joinpath(queue[0].file_name)
-            window_man.send_input(string = str(abs_path))
-            window_man.send_input(keys=['alt','s'])
+            self.window.set_focus()
+            FILE_NAME_FIELD.as_element(self.window).set_text(str(queue[0].export_path()))
+            self.win_man.send_input(keys='enter')
 
         def _close_report():
-            window_man.send_input(keys=['esc'])
+            self.window.set_focus()
+            self.win_man.send_input(keys=['esc'])
 
+        def _handle_unwanted_dialog():
+            self.window.set_focus()
+            top_dialog_title = self.win_man.top_dialog(self.app)
 
-        _memorized_reports()
+            def focus():
+                self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
+                unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
+                unwanted_dialog.set_focus()    
 
+            if top_dialog_title == CONFIRM_SAVE_AS.title:
+                focus()
+                self.win_man.send_input(keys=['y'])
+
+            self._handle_global_popups()
+
+        
+
+        self.logger.info("Entering save loop...")
         while len(queue) != 0:  
-            if window_man.active_dialog().name == REPORT_LIST:
+            _memorized_reports()
+
+            if self.win_man.top_dialog(self.app) == MEMORIZED_REPORTS_WINDOW.title:
+                self.logger.debug("Memorized report list is detected and focused...") 
                 _find_report()
+                _handle_unwanted_dialog()
+            else:
+                _memorized_reports()
 
-            if window_man.active_dialog().name == queue[0].name:
+            if self.win_man.is_element_active(EXCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+                self.logger.debug("Selected report is detected and focused...")
                 _save_as_new_worksheet()
+                _handle_unwanted_dialog()
             
-            if window_man.active_dialog().name == SAVE_AS_DATA_FILE:
+            if self.win_man.is_element_active(AS_CSV_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+                self.logger.debug("`%s` Button is detected and focused...",AS_CSV_BUTTON.title)
                 _save_as_csv()
+                _handle_unwanted_dialog()
 
-            if window_man.active_dialog().name == SAVE_FILE_AS:
+            if self.win_man.is_element_active(FILE_NAME_FIELD.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+                self.logger.debug("`%s` Window is detected and focused...",SAVE_FILE_AS_WINDOW.title)
                 _save_file()
+                _handle_unwanted_dialog()
+            else:
+                print("NOT DETECTED")
              
-            if window_man.active_dialog().name == EXPORTING:
+            if self.win_man.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
                 loading = True
                 while loading:
-                    if window_man.active_dialog().name == EXPORTING:
+                    if self.win_man.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=0.1):
+                        self.logger.debug("The report `%s` is saving...", self.win_man.top_dialog(self.app))
                         time.sleep(1)
                     else:
                         loading = False
                 
-                _close_report()
+                _handle_unwanted_dialog()
+                self.home()
                 queue.remove(queue[0])    
 
 

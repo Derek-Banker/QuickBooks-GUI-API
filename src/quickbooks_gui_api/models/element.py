@@ -1,20 +1,22 @@
 # src\quickbooks_gui_api\models\element.py
 
-from dataclasses import dataclass
 from typing import Literal
 
-@dataclass
+from pywinauto import WindowSpecification
+
 class Element:
     def __init__(
             self,
             control_type:   Literal["Window", "Edit", "Pane", "Button"] | None = None,
             title:          str | None = None,
-            auto_id:        str | None = None
+            auto_id:        str | int | None = None,
+            parent:         WindowSpecification | None = None
         ) -> None:
     
         self._control_type  = control_type
         self._title         = title
-        self._auto_id       = auto_id
+        self._auto_id       = str(auto_id)
+        self._parent        = parent
 
     @property
     def control_type(self) -> str | None:
@@ -28,4 +30,26 @@ class Element:
     def auto_id(self) -> str | None:
         return self._auto_id
 
+    @property
+    def kwargs(self) -> dict[str, str]:
+        mapping = {
+            "control_type": self._control_type,
+            "title":        self._title,
+            "auto_id":      self._auto_id,
+        }
+        # remove any entries whose value is None, "", or the literal "None"
+        return {
+            key: value
+            for key, value in mapping.items()
+            if value not in (None, "", "None")
+        }
     
+    def as_element(self, parent: WindowSpecification | None ) -> WindowSpecification:
+
+        if parent is None:
+            if self._parent is not None:
+                parent = self._parent
+            else:
+                raise    
+            
+        return parent.child_window(**self.kwargs)   

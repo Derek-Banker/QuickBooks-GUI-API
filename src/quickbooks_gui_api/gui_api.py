@@ -241,5 +241,3 @@ class QuickBookGUIAPI:
         self.logger.info("Entering shutdown routine...")
         
         self._terminate_processes(QUICKBOOKS_PROCESSES)
-
-    

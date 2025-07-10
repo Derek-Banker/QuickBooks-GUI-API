@@ -16,20 +16,23 @@ logger = logging.getLogger(__name__)
 
 from quickbooks_gui_api import QuickBookGUIAPI
 from quickbooks_gui_api.apis import Reports
-from quickbooks_gui_api.models import Invoice
+from quickbooks_gui_api.models import Report
 
-invoices: list =    [
+reports: list = [
+                 "Data Export - All Invoices - V 3",
+                 "A/P Aging Detail",
+                 "cara payroll workers comp audit",
+                ]
 
 
 main = QuickBookGUIAPI() 
 app, window = main.startup()
-main._kill_avatax()
 
-invoice_objects: List[Invoice] = []
+report_objects: List[Report] = []
 
-for invoice in invoices:
-    invoice_objects.append(Invoice(str(invoice), None, Path(r"C:\Users\Derek\CFS - Derek\Holding")))
+for report in reports:
+    report_objects.append(Report(str(report), None, Path(r"C:\Users\Derek\CFS - Derek\Holding")))
 
-invoice_saver = Invoices(app, window)
-invoice_saver.save(invoice_objects)
+report_saver = Reports(app, window)
+report_saver.save(report_objects)
 
