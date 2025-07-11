@@ -165,6 +165,8 @@ class Reports:
                 else:
                     attempt_close(i)
 
+    
+
 
     def save(
         self, 
@@ -223,11 +225,7 @@ class Reports:
         def _save_file():
             self.window.set_focus()
             FILE_NAME_FIELD.as_element(self.window).set_text(str(queue[0].export_path()))
-            self.win_man.send_input(keys='enter')
-
-        def _close_report():
-            self.window.set_focus()
-            self.win_man.send_input(keys=['esc'])
+            self.win_man.send_input(keys='enter') 
 
         def _handle_unwanted_dialog():
             self.window.set_focus()
