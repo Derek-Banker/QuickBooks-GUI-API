@@ -5,15 +5,14 @@ import time
 import logging
 import pytomlpp
 import toml_init
-from toml_init import EncryptionManager
-from pathlib import Path
+from toml_init  import EncryptionManager
+from pathlib    import Path
 
-from typing import Final, Any
-from pywinauto import Application, WindowSpecification
+from typing     import Final, Any
+from pywinauto  import Application, WindowSpecification
 
-
-# from quickbooks_gui_api.apis import Invoices, Reports
-from quickbooks_gui_api.managers import Color, ProcessManager, WindowManager, StringManager, Helper
+from quickbooks_gui_api.models      import Invoice, Report
+from quickbooks_gui_api.managers    import Color, ProcessManager, WindowManager, StringManager, Helper
 
 
 COMPANY_NOT_LOADED: Final[str] = "No QuickBooks Company Loaded"
@@ -241,3 +240,15 @@ class QuickBookGUIAPI:
         self.logger.info("Entering shutdown routine...")
         
         self._terminate_processes(QUICKBOOKS_PROCESSES)
+
+    def save_invoices(self, invoices: Invoice | list[Invoice]):
+        from quickbooks_gui_api.apis import Invoices
+
+        if self.app is not None and self.window is not None:
+            Invoices(self.app,self.window).save(invoices)
+
+    def save_reports (self, reports: Report | list[Report]):
+        from quickbooks_gui_api.apis import Reports
+
+        if self.app is not None and self.window is not None:
+            Reports(self.app,self.window).save(reports)

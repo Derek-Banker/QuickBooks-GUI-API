@@ -1,7 +1,7 @@
 # src\quickbooks_gui_api\models\report.py
 
 from pathlib import Path
-from quickbooks_gui_api.managers.string import sanitize_file_name
+from quickbooks_gui_api.utilities import sanitize_file_name
 
 class Report:
     def __init__(self,
@@ -10,7 +10,7 @@ class Report:
                  save_path: Path
                 ) -> None:
         self._name:         str  = name
-        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else name) + ".CSV"
+        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else name) + ".csv"
         self._save_path:    Path = save_path
         
 

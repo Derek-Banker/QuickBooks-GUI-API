@@ -7,8 +7,8 @@ from typing                         import Dict, Any, Literal
 from pywinauto                      import WindowSpecification
 from pywinauto.controls.uiawrapper  import UIAWrapper
 
-from quickbooks_gui_api.managers import image, ocr, string, window
-from quickbooks_gui_api.models import Image
+from quickbooks_gui_api.managers    import image, ocr, string, window
+from quickbooks_gui_api.models      import Image
 
 
 class Helper:

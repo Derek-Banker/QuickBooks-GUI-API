@@ -1,7 +1,6 @@
 # src\quickbooks_gui_api\models\element.py
 
 from typing import Literal
-
 from pywinauto import WindowSpecification
 
 class Element:
@@ -17,6 +16,8 @@ class Element:
         self._title         = title
         self._auto_id       = str(auto_id)
         self._parent        = parent
+        
+        self._as_element: WindowSpecification | None = None
 
     @property
     def control_type(self) -> str | None:
@@ -44,12 +45,17 @@ class Element:
             if value not in (None, "", "None")
         }
     
-    def as_element(self, parent: WindowSpecification | None ) -> WindowSpecification:
+    def as_element(self, parent: WindowSpecification | None = None) -> WindowSpecification:
 
-        if parent is None:
-            if self._parent is not None:
-                parent = self._parent
-            else:
-                raise    
-            
-        return parent.child_window(**self.kwargs)   
+        if self._as_element is None:    
+            if parent is None:
+                if self._parent is not None:
+                    parent = self._parent
+                else:
+                    raise    
+                
+            self._as_element = parent.child_window(**self.kwargs)   
+
+        return self._as_element
+        
+

@@ -8,8 +8,6 @@ import numpy
 import mss
 import cv2
 
-from pathlib import Path
-
 from quickbooks_gui_api.models import Image
 
 class Color:
