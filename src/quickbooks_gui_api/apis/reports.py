@@ -4,15 +4,14 @@ import logging
 import pytomlpp
 from pathlib import Path
 
-from dataclasses import dataclass
-from typing import List, Dict, Any, overload, Final
+from typing import List
 from pywinauto import Application, WindowSpecification
 
 
-from quickbooks_gui_api.managers import WindowManager, ImageManager, Color, OCRManager, StringManager, ProcessManager, Helper
-from quickbooks_gui_api.models import Report, Image, Element
+from quickbooks_gui_api.managers import WindowManager, FileManager
+from quickbooks_gui_api.models import Report, Element
 
-from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, ExpectedDialogNotFound, InvalidPrinter
+from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound
 
 
 # Shortened window and dialog names:
@@ -67,11 +66,12 @@ class Reports:
         self.app    = application
         self.window = window
 
-        self.img_man = ImageManager() 
-        self.str_man = StringManager()
-        self.win_man = WindowManager()
-        self.ocr_man = OCRManager()
-        self.helper = Helper()
+        # self.img_man = ImageManager() 
+        # self.str_man = StringManager()
+        # self.ocr_man = OCRManager()
+        # self.helper = Helper()
+        self.window_manager = WindowManager()
+        self.file_manger    = FileManager()
             
     def load_config(self, path) -> None:
         if path is None:
@@ -88,11 +88,13 @@ class Reports:
 
         try:
             config = pytomlpp.load(self.config_path)["QuickBooksGUIAPI"]
-            self.QUICKBOOKS_WINDOW_NAME:    str     = config["QUICKBOOKS_WINDOW_NAME"]
             self.SHOW_TOASTS:               bool    = config["SHOW_TOASTS"] 
             self.WINDOW_LOAD_DELAY:         float   = config["WINDOW_LOAD_DELAY"]
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
+            self.MAX_REPORT_LOAD_TIME:      float   = config["MAX_REPORT_LOAD_TIME"]
+            self.QUICKBOOKS_WINDOW_NAME:    str     = config["QUICKBOOKS_WINDOW_NAME"]
+            self.ACCEPTABLE_FILE_AGE:       float   = config["ACCEPTABLE_FILE_AGE"]
             self.HOME_TRIES:                int     = 10
 
             self.REPORT_NAME_MATCH_THRESHOLD: float   = config["REPORT_NAME_MATCH_THRESHOLD"]
@@ -102,7 +104,7 @@ class Reports:
             raise e
 
     def _handle_global_popups(self):
-        all_titles = self.win_man.get_all_dialog_titles(self.app)
+        all_titles = self.window_manager.get_all_dialog_titles(self.app)
 
         if HAVE_ANY_QUESTIONS.title in all_titles:
             self.logger.debug("Unwanted dialog detected. `%s` Closing...",HAVE_ANY_QUESTIONS.title)
@@ -111,18 +113,18 @@ class Reports:
         if NEW_FEATURE.title in all_titles:
             self.logger.debug("Unwanted dialog detected. `%s` Closing...",NEW_FEATURE.title)
             NEW_FEATURE.as_element(self.window).set_focus()
-            self.win_man.send_input('enter')
+            self.window_manager.send_input('enter')
 
         if QUICKBOOKS_PAYMENTS.title in all_titles:
             self.logger.debug("Unwanted dialog detected. `%s` Closing...",QUICKBOOKS_PAYMENTS.title)
             QUICKBOOKS_PAYMENTS.as_element(self.window).set_focus()
-            self.win_man.send_input('esc')
+            self.window_manager.send_input('esc')
 
     def home(self, true_home: bool = False) -> None:
         self.window.set_focus()
         
         def attempt_close(i: int):
-            top_title = self.win_man.top_dialog(self.app)
+            top_title = self.window_manager.top_dialog(self.app)
             try:
                 self.window.child_window(control_type = "Window", title = top_title).close()
                 self.logger.debug("Closed window `%s`. Attempt `%i`/`%i`.", top_title, i+1, self.HOME_TRIES)
@@ -150,7 +152,7 @@ class Reports:
 
         if true_home:
             for i in range(self.HOME_TRIES):
-                titles = self.win_man.get_all_dialog_titles(self.app)
+                titles = self.window_manager.get_all_dialog_titles(self.app)
                 if len(titles) == 1 and self.QUICKBOOKS_WINDOW_NAME in titles[0]:
                     return
                 else:
@@ -159,7 +161,7 @@ class Reports:
 
         else:
             for i in range(self.HOME_TRIES):
-                titles = self.win_man.get_all_dialog_titles(self.app)
+                titles = self.window_manager.get_all_dialog_titles(self.app)
                 if memorized_list_and_base(titles):
                     return
                 else:
@@ -190,46 +192,46 @@ class Reports:
 
         def _memorized_reports():
             self.window.set_focus()
-            self.win_man.send_input(['alt', 'R'])
-            self.win_man.send_input('z')
-            self.win_man.send_input('enter')
+            self.window_manager.send_input(['alt', 'R'])
+            self.window_manager.send_input('z')
+            self.window_manager.send_input('enter')
         
         def _find_report():
             self.window.set_focus()
 
             report_name = queue[0].name
 
-            if report_name in self.win_man.get_all_dialog_titles(self.app):
+            if report_name in self.window_manager.get_all_dialog_titles(self.app):
                 self.logger.warning("The report `%s` is already open, calling home function to close everything...", report_name)
                 self.home(True) 
             
-            self.win_man.send_input(string=report_name, char_at_a_time=True)
+            self.window_manager.send_input(string=report_name, char_at_a_time=True)
 
-            self.win_man.send_input(["alt","s"])
+            self.window_manager.send_input(["alt","s"])
 
-            if self.win_man.top_dialog(self.app) == report_name:
+            if self.window_manager.top_dialog(self.app) == report_name:
                 self.logger.info("The intended report, `%s`, has been successfully opened.", report_name)
             else:
-                self.logger.info("The attempt to open, `%s`, has has failed. THe current top window is `%s`.", report_name,self.win_man.top_dialog(self.app))
+                self.logger.info("The attempt to open, `%s`, has has failed. THe current top window is `%s`.", report_name,self.window_manager.top_dialog(self.app))
 
         def _save_as_new_worksheet():
             self.window.set_focus()
             EXCEL_BUTTON.as_element(self.window).click_input()
-            self.win_man.send_input('n')
+            self.window_manager.send_input('n')
 
         def _save_as_csv():
             self.window.set_focus()
             AS_CSV_BUTTON.as_element(self.window).click_input()
-            self.win_man.send_input(['alt', 'x'])
+            self.window_manager.send_input(['alt', 'x'])
 
-        def _save_file():
+        def _save_file(path: Path):
             self.window.set_focus()
-            FILE_NAME_FIELD.as_element(self.window).set_text(str(queue[0].export_path()))
-            self.win_man.send_input(keys='enter') 
+            FILE_NAME_FIELD.as_element(self.window).set_text(str(path))
+            self.window_manager.send_input(keys='enter') 
 
         def _handle_unwanted_dialog():
             self.window.set_focus()
-            top_dialog_title = self.win_man.top_dialog(self.app)
+            top_dialog_title = self.window_manager.top_dialog(self.app)
 
             def focus():
                 self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
@@ -238,7 +240,7 @@ class Reports:
 
             if top_dialog_title == CONFIRM_SAVE_AS.title:
                 focus()
-                self.win_man.send_input(keys=['y'])
+                self.window_manager.send_input(keys=['y'])
 
             self._handle_global_popups()
 
@@ -248,42 +250,58 @@ class Reports:
         while len(queue) != 0:  
             _memorized_reports()
 
-            if self.win_man.top_dialog(self.app) == MEMORIZED_REPORTS_WINDOW.title:
+            report_path = queue[0].export_path() 
+            pre_existing_file = report_path.exists()
+
+
+            if self.window_manager.top_dialog(self.app) == MEMORIZED_REPORTS_WINDOW.title:
                 self.logger.debug("Memorized report list is detected and focused...") 
                 _find_report()
                 _handle_unwanted_dialog()
             else:
                 _memorized_reports()
 
-            if self.win_man.is_element_active(EXCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+            if self.window_manager.is_element_active(EXCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
                 self.logger.debug("Selected report is detected and focused...")
                 _save_as_new_worksheet()
                 _handle_unwanted_dialog()
             
-            if self.win_man.is_element_active(AS_CSV_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+            if self.window_manager.is_element_active(AS_CSV_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
                 self.logger.debug("`%s` Button is detected and focused...",AS_CSV_BUTTON.title)
                 _save_as_csv()
                 _handle_unwanted_dialog()
 
-            if self.win_man.is_element_active(FILE_NAME_FIELD.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+            if self.window_manager.is_element_active(FILE_NAME_FIELD.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
                 self.logger.debug("`%s` Window is detected and focused...",SAVE_FILE_AS_WINDOW.title)
-                _save_file()
+                _save_file(report_path)
                 _handle_unwanted_dialog()
             else:
                 print("NOT DETECTED")
              
-            if self.win_man.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
-                loading = True
-                while loading:
-                    if self.win_man.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=0.1):
-                        self.logger.debug("The report `%s` is saving...", self.win_man.top_dialog(self.app))
-                        time.sleep(1)
-                    else:
-                        loading = False
+            # if self.window_manager.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
+            #     loading = True
+            #     while loading:
+            #         if self.window_manager.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=0.1):
+            #             self.logger.debug("The report `%s` is saving...", self.window_manager.top_dialog(self.app))
+            #             time.sleep(1)
+            #         else:
+            #             loading = False
+
+            if self.file_manger.wait_for_file(report_path, self.MAX_REPORT_LOAD_TIME):
+                self.logger.debug("The report file, `%s`, exists.", report_path.name)
+                self.file_manger.wait_till_stable(report_path, self.MAX_REPORT_LOAD_TIME)
+                self.logger.debug("The report file, `%s`, is stable.", report_path.name)
+                if pre_existing_file:
+                    file_age = self.file_manger.time_since_modified(report_path)
+                    self.logger.warning("the file `%s` existed before the report was saved. The file was last modified `%.2f` second ago.", report_path.name, file_age)
+                    if  file_age >= self.ACCEPTABLE_FILE_AGE:
+                        error = ValueError(f"The report file is `{file_age}` seconds old. Which is older than ACCEPTABLE_FILE_AGE, `{self.ACCEPTABLE_FILE_AGE}`. This may indicate the file was already there and was not saved correctly.")
+                        self.logger.error(error)
+                        raise error
                 
                 _handle_unwanted_dialog()
                 self.home()
                 queue.remove(queue[0])    
 
-
+        self.home(True)
 

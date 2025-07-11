@@ -10,7 +10,7 @@ class Report:
                  save_path: Path
                 ) -> None:
         self._name:         str  = name
-        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else name)
+        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else name) + ".CSV"
         self._save_path:    Path = save_path
         
 
