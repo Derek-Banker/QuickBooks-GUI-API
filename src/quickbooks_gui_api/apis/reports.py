@@ -88,7 +88,7 @@ class Reports:
 
         try:
             config = pytomlpp.load(self.config_path)["QuickBooksGUIAPI"]
-
+            self.QUICKBOOKS_WINDOW_NAME:    str     = config["QUICKBOOKS_WINDOW_NAME"]
             self.SHOW_TOASTS:               bool    = config["SHOW_TOASTS"] 
             self.WINDOW_LOAD_DELAY:         float   = config["WINDOW_LOAD_DELAY"]
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
@@ -118,14 +118,53 @@ class Reports:
             QUICKBOOKS_PAYMENTS.as_element(self.window).set_focus()
             self.win_man.send_input('esc')
 
-    def home(self) -> None:
+    def home(self, true_home: bool = False) -> None:
         self.window.set_focus()
-        counter = self.HOME_TRIES
-        while len(self.win_man.get_all_dialog_titles(self.app)) > 1 and counter > 0:
-            self.logger.debug("More than one dialog window detected, attempting to get to the base level aka 'Home'")
-            self.win_man.send_input('esc')
-            counter -= 1
-            time.sleep(1)
+        
+        def attempt_close(i: int):
+            top_title = self.win_man.top_dialog(self.app)
+            try:
+                self.window.child_window(control_type = "Window", title = top_title).close()
+                self.logger.debug("Closed window `%s`. Attempt `%i`/`%i`.", top_title, i+1, self.HOME_TRIES)
+            except Exception:
+                self.logger.exception("Error attempting to close targeted window, `%s`",top_title)
+
+        def memorized_list_and_base(titles: list[str]) -> bool:
+            base: bool = False
+            memorized_list: bool = False
+            number_of_titles = len(titles)
+
+
+            for title in titles:
+                if self.QUICKBOOKS_WINDOW_NAME in title:
+                    base = True
+                if title == MEMORIZED_REPORTS_WINDOW.title:
+                    memorized_list = True
+
+                if number_of_titles == 1 and base:
+                    return True
+                elif number_of_titles == 2 and base and memorized_list:
+                    return True
+
+            return False
+
+        if true_home:
+            for i in range(self.HOME_TRIES):
+                titles = self.win_man.get_all_dialog_titles(self.app)
+                if len(titles) == 1 and self.QUICKBOOKS_WINDOW_NAME in titles[0]:
+                    return
+                else:
+                    attempt_close(i)
+                    
+
+        else:
+            for i in range(self.HOME_TRIES):
+                titles = self.win_man.get_all_dialog_titles(self.app)
+                if memorized_list_and_base(titles):
+                    return
+                else:
+                    attempt_close(i)
+
 
     def save(
         self, 
@@ -143,7 +182,7 @@ class Reports:
             self.logger.debug("List detected. Appending `%i` to queue for processing.", len(reports))
 
         self._handle_global_popups()
-        self.home()
+        self.home(True)
 
         self.window.set_focus()
 
@@ -155,27 +194,21 @@ class Reports:
         
         def _find_report():
             self.window.set_focus()
-            report_name = queue[0].name 
-            length = len(report_name)
 
-            for i in range(length):
-                char = report_name[i]
-                self.win_man.send_input(string=char)
+            report_name = queue[0].name
 
-            valid_match, pulled_text, match_confidence = self.helper.capture_isolate_ocr_match(
-                self.window,
-                single_or_multi= "single",
-                color= Color(hex_val="4e9e19"),
-                tolerance= 5.0,
-                target_text= report_name,
-                match_threshold= self.REPORT_NAME_MATCH_THRESHOLD
-            )
+            if report_name in self.win_man.get_all_dialog_titles(self.app):
+                self.logger.warning("The report `%s` is already open, calling home function to close everything...", report_name)
+                self.home(True) 
+            
+            self.win_man.send_input(string=report_name, char_at_a_time=True)
 
-            if valid_match:
-                self.win_man.send_input(["alt","s"])
-                self.logger.info("The selected report `%s` matched the intended report, `%s`, with a confidence of `%s`.",pulled_text,report_name,match_confidence)
+            self.win_man.send_input(["alt","s"])
+
+            if self.win_man.top_dialog(self.app) == report_name:
+                self.logger.info("The intended report, `%s`, has been successfully opened.", report_name)
             else:
-                self.logger.error(f"The selected report, `{pulled_text}`, only matched the intended report, `{report_name}`, with a confidence of `{match_confidence}`. This is below the configured threshold")
+                self.logger.info("The attempt to open, `%s`, has has failed. THe current top window is `%s`.", report_name,self.win_man.top_dialog(self.app))
 
         def _save_as_new_worksheet():
             self.window.set_focus()

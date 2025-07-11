@@ -11,7 +11,7 @@ REPORT_NAME_MATCH_THRESHOLD = { defaultValue = 85.0, type = "float", min = 70.0,
 PROCESS_START_DELAY     = { defaultValue = 5.0,  type = "float", min = 3.0 }
 COMPANY_FILE_LOAD_DELAY = { defaultValue = 5.0,  type = "float", min = 3.0 }
 LOGIN_DELAY             = { defaultValue = 25.0, type = "float", min = 10.0 }
-
+QUICKBOOKS_WINDOW_NAME  = { defaultValue = " - Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0", type = "str" }  
 WINDOW_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
 DIALOG_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
 NAVIGATION_DELAY        = { defaultValue = 0.15, type = "float", min = 0.0 }
