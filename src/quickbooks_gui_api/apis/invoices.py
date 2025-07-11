@@ -15,20 +15,19 @@ from quickbooks_gui_api.models import Invoice, Element
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, InvalidPrinter
 
 # Shortened window and dialog names:
-NEW_INVOICE_WINDOW: Element = Element("Window", "Create Invoices - Accounts Receivable (Editing Transaction...) ", 65280)
-VIEWING_INVOICE_WINDOW: Element = Element("Window", "Create Invoices - Accounts Receivable", 65280)
-FIND_INVOICE_WINDOW: Element = Element("Window", "Find Invoices", None)
-INVOICE_NUMBER_FIELD: Element = Element("Edit", None, 3636)
-FIND_BUTTON: Element = Element("Pane", "Find", 51)
-PRINT_INVOICE_DIALOG: Element = Element("Window", "Print One Invoice", None)
-SAVE_PRINT_AS: Element = Element("Window", "Save Print Output As", None)
-FILE_NAME_FIELD: Element = Element("Edit", None, 1001)
-OVERWRITE_FILE: Element = Element("Window", "Confirm Save As", None)
-DATE_ERROR: Element = Element("Window", "Warning", None)
-CREDITS: Element = Element("Window", "Available Credits", None)
-CHANGED_TRANSACTION: Element = Element("Window", "Recording Transaction", None)
-
-
+NEW_INVOICE_WINDOW:         Element = Element("Window", "Create Invoices - Accounts Receivable (Editing Transaction...) ",  65280)
+VIEWING_INVOICE_WINDOW:     Element = Element("Window", "Create Invoices - Accounts Receivable",                            65280)
+FIND_INVOICE_WINDOW:        Element = Element("Window", "Find Invoices",                                                    None)
+INVOICE_NUMBER_FIELD:       Element = Element("Edit",   None,                                                               3636)
+FIND_BUTTON:                Element = Element("Pane",   "Find",                                                             51)
+PRINT_INVOICE_WINDOW:       Element = Element("Window", "Print One Invoice",                                                None)
+SAVE_PRINT_AS_WINDOW:       Element = Element("Window", "Save Print Output As",                                             None)
+FILE_NAME_FIELD:            Element = Element("Edit",   None,                                                               1001)
+OVERWRITE_FILE_POPUP:       Element = Element("Window", "Confirm Save As",                                                  None)
+DATE_ERROR_POPUP:           Element = Element("Window", "Warning",                                                          None)
+AVAILABLE_CREDITS_POPUP:    Element = Element("Window", "Available Credits",                                                None)
+CHANGED_TRANSACTION_POPUP:  Element = Element("Window", "Recording Transaction",                                            None)
+ESTIMATE_LINKED_POPUP:      Element = Element("Window", "Recording Transaction",                                            None)
 
 
 class Invoices:
@@ -165,11 +164,11 @@ class Invoices:
             self.window.set_focus()
             self.window_manager.send_input(keys=["ctrl","p"])
             
-            if self.window_manager.is_element_active(PRINT_INVOICE_DIALOG.as_element(self.window), timeout=self.DIALOG_LOAD_DELAY, retry_interval=0.05, attempt_focus=True):
+            if self.window_manager.is_element_active(PRINT_INVOICE_WINDOW.as_element(self.window), timeout=self.DIALOG_LOAD_DELAY, retry_interval=0.05, attempt_focus=True):
                 self.logger.debug("The print_invoice_dialog was found and determined to be active. Proceeding to verify and select printer...")
 
                 valid_printer = self.helper.capture_isolate_ocr_match(
-                                    PRINT_INVOICE_DIALOG.as_element(self.window),
+                                    PRINT_INVOICE_WINDOW.as_element(self.window),
                                     single_or_multi="single",
                                     color = Color(hex_val="4e9e19"),
                                     target_text= self.VALID_INVOICE_PRINTER,
@@ -213,15 +212,19 @@ class Invoices:
                 unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
                 unwanted_dialog.set_focus()    
 
-            if top_dialog_title == CREDITS:
+            if top_dialog_title == AVAILABLE_CREDITS_POPUP.title:
                 focus()
                 self.window_manager.send_input(keys=['alt', 'n'])
 
-            elif top_dialog_title == CHANGED_TRANSACTION:
+            elif top_dialog_title == CHANGED_TRANSACTION_POPUP.title:
                 focus()
                 self.window_manager.send_input(keys=['alt', 'n'])
 
-            elif top_dialog_title == OVERWRITE_FILE:
+            elif top_dialog_title == ESTIMATE_LINKED_POPUP.title:
+                focus()
+                self.window_manager.send_input(keys=['alt', 'n'])
+
+            elif top_dialog_title == OVERWRITE_FILE_POPUP.title:
                 focus()
                 self.window_manager.send_input(keys=['y'])
 
@@ -238,19 +241,15 @@ class Invoices:
             self.logger.debug("Saving invoice in queue. Current index is `%i`.", index)
             self.window.set_focus()
             self.logger.debug("Current top_dialog = `%s`.", self.window_manager.top_dialog(self.app))
-            if self.window_manager.top_dialog(self.app) == NEW_INVOICE_WINDOW or self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW:
+            if self.window_manager.top_dialog(self.app) == NEW_INVOICE_WINDOW.title or self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _find_invoice()
                 _handle_unwanted_dialog()
 
-            if self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW:
+            if self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _print_to_pdf()
                 _handle_unwanted_dialog()
 
-            # if self.win_man.top_dialog(self.app) == PRINT_INVOICE_DIALOG:
-            #     _save_invoice()
-            #     _handle_unwanted_dialog()
-
-            if  self.window_manager.top_dialog(self.app) == SAVE_PRINT_AS:
+            if  self.window_manager.top_dialog(self.app) == SAVE_PRINT_AS_WINDOW.title:
                 _save_pdf_file()
                 _handle_unwanted_dialog() 
                 queue.remove(queue[0]) 
