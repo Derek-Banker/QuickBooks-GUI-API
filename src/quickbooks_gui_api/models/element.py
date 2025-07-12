@@ -1,6 +1,7 @@
 # src\quickbooks_gui_api\models\element.py
 
 from typing import Literal
+
 from pywinauto import WindowSpecification
 
 class Element:
@@ -18,6 +19,9 @@ class Element:
         self._parent        = parent
         
         self._as_element: WindowSpecification | None = None
+
+    def __str__(self) -> str:
+        return f"{{control_type: `{self._control_type}`, title: `{self._title}`, auto_id: `{self._auto_id}`}}"
 
     @property
     def control_type(self) -> str | None:
@@ -54,7 +58,7 @@ class Element:
                 else:
                     raise    
                 
-            self._as_element = parent.child_window(**self.kwargs)   
+            self._as_element = parent.child_window(**self.kwargs)
 
         return self._as_element
         

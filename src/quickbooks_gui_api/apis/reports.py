@@ -71,7 +71,7 @@ class Reports:
         # self.ocr_man = OCRManager()
         # self.helper = Helper()
         self.window_manager = WindowManager()
-        self.file_manger    = FileManager()
+        self.file_manager    = FileManager()
             
     def load_config(self, path) -> None:
         if path is None:
@@ -92,7 +92,7 @@ class Reports:
             self.WINDOW_LOAD_DELAY:         float   = config["WINDOW_LOAD_DELAY"]
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
-            self.MAX_REPORT_LOAD_TIME:      float   = config["MAX_REPORT_LOAD_TIME"]
+            self.MAX_REPORT_SAVE_TIME:      float   = config["MAX_REPORT_SAVE_TIME"]
             self.QUICKBOOKS_WINDOW_NAME:    str     = config["QUICKBOOKS_WINDOW_NAME"]
             self.ACCEPTABLE_FILE_AGE:       float   = config["ACCEPTABLE_FILE_AGE"]
             self.HOME_TRIES:                int     = 10
@@ -287,12 +287,12 @@ class Reports:
             #         else:
             #             loading = False
 
-            if self.file_manger.wait_for_file(report_path, self.MAX_REPORT_LOAD_TIME):
+            if self.file_manager.wait_for_file(report_path, self.MAX_REPORT_SAVE_TIME):
                 self.logger.debug("The report file, `%s`, exists.", report_path.name)
-                self.file_manger.wait_till_stable(report_path, self.MAX_REPORT_LOAD_TIME)
+                self.file_manager.wait_till_stable(report_path, self.MAX_REPORT_SAVE_TIME)
                 self.logger.debug("The report file, `%s`, is stable.", report_path.name)
                 if pre_existing_file:
-                    file_age = self.file_manger.time_since_modified(report_path)
+                    file_age = self.file_manager.time_since_modified(report_path)
                     self.logger.warning("the file `%s` existed before the report was saved. The file was last modified `%.2f` second ago.", report_path.name, file_age)
                     if  file_age >= self.ACCEPTABLE_FILE_AGE:
                         error = ValueError(f"The report file is `{file_age}` seconds old. Which is older than ACCEPTABLE_FILE_AGE, `{self.ACCEPTABLE_FILE_AGE}`. This may indicate the file was already there and was not saved correctly.")

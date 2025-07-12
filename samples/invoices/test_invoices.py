@@ -38,3 +38,5 @@ for invoice in invoices:
 invoice_saver = Invoices(app, window)
 invoice_saver.save(invoice_objects)
 
+main.shutdown()
+

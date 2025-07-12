@@ -4,12 +4,13 @@ import time
 import logging
 import pytomlpp
 from pathlib import Path
+from datetime import datetime
 
 from typing import List, Final
 from pywinauto import Application, WindowSpecification
 
 
-from quickbooks_gui_api.managers import WindowManager, Color, Helper
+from quickbooks_gui_api.managers import WindowManager, FileManager, Color, Helper
 from quickbooks_gui_api.models import Invoice, Element
 
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, InvalidPrinter
@@ -18,11 +19,11 @@ from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound, InvalidPr
 NEW_INVOICE_WINDOW:         Element = Element("Window", "Create Invoices - Accounts Receivable (Editing Transaction...) ",  65280)
 VIEWING_INVOICE_WINDOW:     Element = Element("Window", "Create Invoices - Accounts Receivable",                            65280)
 FIND_INVOICE_WINDOW:        Element = Element("Window", "Find Invoices",                                                    None)
-INVOICE_NUMBER_FIELD:       Element = Element("Edit",   None,                                                               3636)
+INVOICE_NUMBER_FIELD:       Element = Element("Edit",    None,                                                              3636)
 FIND_BUTTON:                Element = Element("Pane",   "Find",                                                             51)
 PRINT_INVOICE_WINDOW:       Element = Element("Window", "Print One Invoice",                                                None)
 SAVE_PRINT_AS_WINDOW:       Element = Element("Window", "Save Print Output As",                                             None)
-FILE_NAME_FIELD:            Element = Element("Edit",   None,                                                               1001)
+FILE_NAME_FIELD:            Element = Element("Edit",   "File name:",                                                       1001)
 OVERWRITE_FILE_POPUP:       Element = Element("Window", "Confirm Save As",                                                  None)
 DATE_ERROR_POPUP:           Element = Element("Window", "Warning",                                                          None)
 AVAILABLE_CREDITS_POPUP:    Element = Element("Window", "Available Credits",                                                None)
@@ -64,6 +65,7 @@ class Invoices:
         self.window = window
 
         self.window_manager = WindowManager()
+        self.file_manager = FileManager()
         self.helper = Helper()
             
     def load_config(self, path) -> None:
@@ -87,6 +89,8 @@ class Invoices:
             self.DIALOG_LOAD_DELAY:         float   = config["DIALOG_LOAD_DELAY"]
             self.NAVIGATION_DELAY:          float   = config["NAVIGATION_DELAY"]
             self.STRING_MATCH_THRESHOLD:    float   = config["STRING_MATCH_THRESHOLD"]
+            self.MAX_INVOICE_SAVE_TIME:     float   = config["MAX_INVOICE_SAVE_TIME"]
+            self.ACCEPTABLE_FILE_AGE:       float   = config["ACCEPTABLE_FILE_AGE"]
             self.VALID_INVOICE_PRINTER:     str     = config["VALID_INVOICE_PRINTER"]
             self.QUICKBOOKS_WINDOW_NAME:    str     = config["QUICKBOOKS_WINDOW_NAME"]
             self.HOME_TRIES:                int     = 10
@@ -241,6 +245,10 @@ class Invoices:
             self.logger.debug("Saving invoice in queue. Current index is `%i`.", index)
             self.window.set_focus()
             self.logger.debug("Current top_dialog = `%s`.", self.window_manager.top_dialog(self.app))
+
+            save_path = queue[0].export_path() 
+            pre_existing_file = save_path.exists()
+
             if self.window_manager.top_dialog(self.app) == NEW_INVOICE_WINDOW.title or self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _find_invoice()
                 _handle_unwanted_dialog()
@@ -248,12 +256,32 @@ class Invoices:
             if self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _print_to_pdf()
                 _handle_unwanted_dialog()
+            start = datetime.now()
+            
 
             if  self.window_manager.top_dialog(self.app) == SAVE_PRINT_AS_WINDOW.title:
+                stop = datetime.now()
+                self.logger.info(f"Previous operation time: `{stop - start}`.\n")
                 _save_pdf_file()
+                _handle_unwanted_dialog()
+
+
+
+            if self.file_manager.wait_for_file(save_path, self.MAX_INVOICE_SAVE_TIME):
+                time.sleep(0.15) # Annoyingly necessary delay. Break without it.
+                self.logger.debug("The report file, `%s`, exists.", save_path.name)
+                self.file_manager.wait_till_stable(save_path, self.MAX_INVOICE_SAVE_TIME)
+                self.logger.debug("The report file, `%s`, is stable.", save_path.name)
+                if pre_existing_file:
+                    file_age = self.file_manager.time_since_modified(save_path)
+                    self.logger.warning("the file `%s` existed before the report was saved. The file was last modified `%.2f` second ago.", save_path.name, file_age)
+                    if  file_age >= self.ACCEPTABLE_FILE_AGE:
+                        error = ValueError(f"The report file is `{file_age}` seconds old. Which is older than ACCEPTABLE_FILE_AGE, `{self.ACCEPTABLE_FILE_AGE}`. This may indicate the file was already there and was not saved correctly.")
+                        self.logger.error(error)
+                        raise error
+
                 _handle_unwanted_dialog() 
                 queue.remove(queue[0]) 
-
 
 
                 
