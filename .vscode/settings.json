@@ -1,0 +1,22 @@
+{
+    "cSpell.words": [
+        "Avalara",
+        "avatax",
+        "findwindows",
+        "GUIAPI",
+        "QBFDT",
+        "qbhelp",
+        "qbupdate",
+        "quickbooks",
+        "uiawrapper"
+    ],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./unittests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}

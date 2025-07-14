@@ -1,0 +1,58 @@
+QuickBooks-GUI-API/
+├── dist/
+│   ├── qb_gui_api-0.0.1-py3-none-any.whl
+│   └── qb_gui_api-0.0.1.tar.gz
+├── samples/
+│   ├── file_manager/
+│   │   ├── Test Case - File Manager.txt
+│   │   └── test_file_manager.py
+│   ├── image_manager/
+│   │   ├── Test Case - Image Manager.png
+│   │   └── test_image_manager.py
+│   ├── invoices/
+│   │   └── test_invoices.py
+│   ├── orc_manager/
+│   │   ├── Test Case - ORC Manager - 1.png
+│   │   ├── Test Case - ORC Manager - 2.png
+│   │   └── test_ocr_manager.py
+│   ├── quickbooks_gui_api/
+│   │   └── test_quickbooks_gui_api.py
+│   ├── reports/
+│   │   └── test_reports.py
+│   └── window_manager/
+│       └── test_window_manager.py
+├── src/
+│   └── quickbooks_gui_api/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── gui_api.py
+│       ├── setup.py
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── element.py
+│       │   ├── image.py
+│       │   ├── invoice.py
+│       │   └── report.py
+│       ├── managers/
+│       │   ├── __init__.py
+│       │   ├── file.py
+│       │   ├── helper.py
+│       │   ├── image.py
+│       │   ├── manager_exceptions.py
+│       │   ├── ocr.py
+│       │   ├── processes.py
+│       │   ├── string.py
+│       │   └── window.py
+│       ├── apis/
+│       │   ├── __init__.py
+│       │   ├── api_exceptions.py
+│       │   ├── invoices.py
+│       │   └── reports.py
+│       └── utilities/
+│           ├── __init__.py
+│           └── utilities.py
+├── unittests/
+├── struct.txt
+├── LICENSE
+├── pyproject.toml
+└── README.md
