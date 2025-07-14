@@ -1,12 +1,14 @@
 # src\quickbooks_gui_api\managers\image.py
 
 from __future__ import annotations
-import logging
-from typing import Literal, List, overload, Tuple
-from PIL import Image as PILImage
-import numpy
-import mss
+
 import cv2
+import mss
+import numpy
+import logging
+
+from PIL import Image as PILImage
+from typing import Literal, List, overload, Tuple
 
 from quickbooks_gui_api.models import Image
 

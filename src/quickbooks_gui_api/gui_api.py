@@ -215,7 +215,7 @@ class QuickBookGUIAPI:
     def startup(self, 
             config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
             config_file_name: str = DEFAULT_CONFIG_FILE_NAME,
-            fuck_avatax: bool = True
+            kill_avatax: bool = True
         ) -> tuple[Application, WindowSpecification]:
         self.logger.info("Entering startup routine...")
 
@@ -231,7 +231,7 @@ class QuickBookGUIAPI:
         if self.string_manager.is_match_in_list(LOGIN, self.window_manager.get_all_dialog_titles(app), 95.0):    
             self._login(window, config)
 
-        if fuck_avatax:
+        if kill_avatax:
             self._kill_avatax()
         
         return app, window

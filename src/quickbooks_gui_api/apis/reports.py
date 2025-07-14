@@ -1,12 +1,9 @@
 
-import time
 import logging
 import pytomlpp
+
 from pathlib import Path
-
-from typing import List
 from pywinauto import Application, WindowSpecification
-
 
 from quickbooks_gui_api.managers import WindowManager, FileManager
 from quickbooks_gui_api.models import Report, Element
@@ -172,11 +169,11 @@ class Reports:
 
     def save(
         self, 
-        reports: Report | List[Report],
+        reports: Report | list[Report],
         # save_directory: Path,
     ) -> None:
 
-        queue: List[Report] = []
+        queue: list[Report] = []
 
         if isinstance(reports, Report):
             queue.append(reports)

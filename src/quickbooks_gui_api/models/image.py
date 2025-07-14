@@ -1,13 +1,12 @@
 # src\quickbooks_gui_api\models\image.py
 from __future__ import annotations
 
+import logging
+from pathlib import Path
 from typing import Literal
 from PIL import Image as PILImage
 
-import logging
 logging.getLogger("PIL").setLevel(logging.WARNING)
-
-from pathlib import Path
 
 class Image:
     """
@@ -21,7 +20,6 @@ class Image:
                  source: tuple[int | None, int | None] = (None, None),
                  size: tuple[int | None, int | None] = (None, None),
                  img: PILImage.Image | None = None,
-                #  path: Path | None = None
                  ) -> None:
         self._source_x: int | None = source[0]
         self._source_y: int | None = source[1]

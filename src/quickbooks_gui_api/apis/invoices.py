@@ -6,7 +6,6 @@ import pytomlpp
 from pathlib import Path
 from datetime import datetime
 
-from typing import List, Final
 from pywinauto import Application, WindowSpecification
 
 
@@ -117,11 +116,11 @@ class Invoices:
 
     def save(
         self, 
-        invoices: Invoice | List[Invoice],
+        invoices: Invoice | list[Invoice],
         # save_directory: Path,
     ) -> None:
 
-        queue: List[Invoice] = []
+        queue: list[Invoice] = []
 
         if isinstance(invoices, Invoice):
             queue.append(invoices)
@@ -240,7 +239,6 @@ class Invoices:
 
 # --- HELPERS END --------------------------------------------------------------------------
 
-        index: int = 0
         loop_start = datetime.now()
         while len(queue) != 0:  
             self.window.set_focus()

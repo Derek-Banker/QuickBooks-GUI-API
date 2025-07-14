@@ -4,8 +4,8 @@ build-backend   = "setuptools.build_meta"
 
 [project]
 name            = "qb-gui-api"
-version         = "0.0.1"
-description     = "A Python API for interacting with QuickBooks Enterprise Desktop "
+version         = "0.1.0"
+description     = "A Python toolkit for automating QuickBooks Desktop via the GUI"
 authors         = [{ name = "Derek Banker", email = "dbb2002@gmail.com" }]
 readme          = "README.md"
 license         = "Apache-2.0"
@@ -15,11 +15,22 @@ keywords        = ["quickbooks","quickbooks desktop","quickbooks enterprise", "i
 classifiers     = ["Programming Language :: Python :: 3",
                    "OS :: Windows"
                   ]
-dependencies    = ["psutil >= 7.0.0",
-                   "toml_init >= 0.1.1",
-                    "rapidfuzz >= 3.13.0",
-                    "click >= 8.0"
-                   ]
+dependencies    = [
+    "psutil >= 7.0.0",
+    "toml_init >= 0.1.1",
+    "pytomlpp >= 1.0",
+    "python-dotenv >= 0.19",
+    "pywinauto >= 0.6",
+    "pyautogui >= 0.9",
+    "pywin32 >= 306; platform_system == 'Windows'",
+    "numpy >= 1.21",
+    "opencv-python >= 4.5",
+    "pytesseract >= 0.3",
+    "mss >= 9.0",
+    "Pillow >= 9.0",
+    "rapidfuzz >= 3.13.0",
+    "click >= 8.0",
+]
 
 # [project.optional-dependencies]
 # dev = [""]

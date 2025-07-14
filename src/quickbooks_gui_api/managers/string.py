@@ -1,11 +1,9 @@
 # src\quickbooks_gui_api\managers\string.py
 
-import re
-import unicodedata
 import logging
 
-from typing import List, Tuple, overload
 from rapidfuzz import fuzz
+from typing import Tuple, overload
 
 
 class StringManager:
@@ -23,13 +21,13 @@ class StringManager:
 
     def rank_matches(
             self, 
-            options: List[str] , 
+            options: list[str] , 
             target: str, 
             first_past_post: bool = False,
             match_threshold: float = 100,
-            ) -> List[Tuple[str,float]]:
+            ) -> list[Tuple[str,float]]:
         
-        results: List[Tuple[str,float]] = [] 
+        results: list[Tuple[str,float]] = [] 
         
         for string in options:
             confidence = fuzz.ratio(string,target)
@@ -93,7 +91,7 @@ class StringManager:
     def is_match_in_list(
             self,
             target: str,
-            input: List[str],  
+            input: list[str],  
             threshold: float = 100,
         ) -> bool:
         """

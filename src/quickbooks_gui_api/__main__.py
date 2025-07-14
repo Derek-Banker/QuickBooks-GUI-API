@@ -57,7 +57,7 @@ def startup(config_dir: Path, config_file: str, no_kill_avatax: bool) -> None:
     api.startup(
         config_directory=config_dir,
         config_file_name=config_file,
-        fuck_avatax=not no_kill_avatax,
+        kill_avatax=not no_kill_avatax,
     )
 
 
