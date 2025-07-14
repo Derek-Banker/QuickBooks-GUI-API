@@ -1,46 +1,58 @@
 QuickBooks-GUI-API/
 ├── dist/
-├── configs/
-│   ├── config.toml
-│   └── defaults/
-│       └── defaults_qb-gui-api.toml
-├── pyproject.toml
-├── LICENSE
-├── README.md
-├── setup_cli.py
+│   ├── qb_gui_api-0.0.1-py3-none-any.whl
+│   └── qb_gui_api-0.0.1.tar.gz
+├── samples/
+│   ├── file_manager/
+│   │   ├── Test Case - File Manager.txt
+│   │   └── test_file_manager.py
+│   ├── image_manager/
+│   │   ├── Test Case - Image Manager.png
+│   │   └── test_image_manager.py
+│   ├── invoices/
+│   │   └── test_invoices.py
+│   ├── orc_manager/
+│   │   ├── Test Case - ORC Manager - 1.png
+│   │   ├── Test Case - ORC Manager - 2.png
+│   │   └── test_ocr_manager.py
+│   ├── quickbooks_gui_api/
+│   │   └── test_quickbooks_gui_api.py
+│   ├── reports/
+│   │   └── test_reports.py
+│   └── window_manager/
+│       └── test_window_manager.py
 ├── src/
 │   └── quickbooks_gui_api/
 │       ├── __init__.py
-│       ├── setup.py
+│       ├── __main__.py
 │       ├── gui_api.py
+│       ├── setup.py
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── element.py
+│       │   ├── image.py
+│       │   ├── invoice.py
+│       │   └── report.py
+│       ├── managers/
+│       │   ├── __init__.py
+│       │   ├── file.py
+│       │   ├── helper.py
+│       │   ├── image.py
+│       │   ├── manager_exceptions.py
+│       │   ├── ocr.py
+│       │   ├── processes.py
+│       │   ├── string.py
+│       │   └── window.py
 │       ├── apis/
 │       │   ├── __init__.py
 │       │   ├── api_exceptions.py
 │       │   ├── invoices.py
 │       │   └── reports.py
-│       ├── managers/
-│       │   ├── __init__.py
-│       │   ├── manager_exceptions.py
-│       │   ├── image.py
-│       │   ├── ocr.py
-│       │   ├── processes.py
-│       │   ├── string.py
-│       │   └── windows.py
-│       └── models/
+│       └── utilities/
 │           ├── __init__.py
-│           ├── invoice.py
-│           ├── report.py
-│           ├── image.py
-│           └── window.py
+│           └── utilities.py
+├── unittests/
 ├── struct.txt
-├── test_reference/
-│   └── example.png
-├── tests/
-│   ├── test.py
-│   ├── test_CCA.py
-│   ├── test_image_manager.py
-│   ├── test_orc.py
-│   ├── test_process_manager.py
-│   ├── test_test.py
-│   └── test_window_manager.py
-└── unittests/
+├── LICENSE
+├── pyproject.toml
+└── README.md
