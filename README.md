@@ -111,4 +111,4 @@ This project is licensed under the Apache 2.0 License. See `LICENSE` for details
 
 ## Trademark Notice
 
-QuickBooks is a registered trademark of Intuit Inc. This project is not affiliated with Intuit and the author makes no claim of ownership or control over the QuickBooks trademark.
+"QuickBooks" is a registered trademark of Intuit Inc. This project is not affiliated with Intuit and the author makes no claim of ownership or control over the QuickBooks trademark.
