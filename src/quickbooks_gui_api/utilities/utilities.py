@@ -18,3 +18,4 @@ def sanitize_file_name(file_name: str) -> str:
 
     # 5. Truncate to 255 characters
     return name[:255] if len(name) > 255 else name
+
