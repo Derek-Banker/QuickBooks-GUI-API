@@ -241,14 +241,14 @@ class Invoices:
 # --- HELPERS END --------------------------------------------------------------------------
 
         index: int = 0
+        loop_start = datetime.now()
         while len(queue) != 0:  
-            self.logger.debug("Saving invoice in queue. Current index is `%i`.", index)
             self.window.set_focus()
-            self.logger.debug("Current top_dialog = `%s`.", self.window_manager.top_dialog(self.app))
-
+            
             save_path = queue[0].export_path() 
             pre_existing_file = save_path.exists()
 
+            start = datetime.now()
             if self.window_manager.top_dialog(self.app) == NEW_INVOICE_WINDOW.title or self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _find_invoice()
                 _handle_unwanted_dialog()
@@ -256,12 +256,9 @@ class Invoices:
             if self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
                 _print_to_pdf()
                 _handle_unwanted_dialog()
-            start = datetime.now()
             
 
             if  self.window_manager.top_dialog(self.app) == SAVE_PRINT_AS_WINDOW.title:
-                stop = datetime.now()
-                self.logger.info(f"Previous operation time: `{stop - start}`.\n")
                 _save_pdf_file()
                 _handle_unwanted_dialog()
 
@@ -281,7 +278,13 @@ class Invoices:
                         raise error
 
                 _handle_unwanted_dialog() 
+                stop = datetime.now()
+                self.logger.info(f"Invoice number `{queue[0].number}` saved in: `{stop - start}`.\n")
                 queue.remove(queue[0]) 
+
+        loop_end = datetime.now()
+        self.logger.info(f"All invoices saved in: `{loop_end - loop_start}`.")
+
 
 
                 

@@ -19,11 +19,14 @@ from quickbooks_gui_api.apis import Invoices
 from quickbooks_gui_api.models import Invoice
 
 invoices: list =    [
-                     1254,
-                     7617,
-                     8929,
-                     15887,
-                     17928
+                     5786,
+                     8921,
+                     11412,
+                     15198,
+                     16968,
+                     17232,
+                     17595,
+                     17677,
                     ]
 
 main = QuickBookGUIAPI() 
