@@ -3,10 +3,9 @@
 import time
 import msvcrt
 import logging
+import hashlib
 
 from pathlib import Path
-
-
 
 class FileManager:
 
@@ -141,3 +140,32 @@ class FileManager:
             )
 
         return time.time() - path.stat().st_mtime
+    
+    
+    def hash_file(self, path: Path) -> str:
+        """
+        Compute and return the SHA-256 hex digest of the file at `path`.
+
+        :param path: Path to the file to hash
+        :type  path: Path
+        :returns: Hex-encoded SHA-256 digest
+        :rtype: str
+        :raises TypeError: if `path` is not a Path
+        :raises FileNotFoundError: if `path` does not exist or is not a file
+        """
+        # 1. Validate input:
+        if not isinstance(path, Path):
+            raise TypeError("path must be an instance of pathlib.Path")
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(f"File not found or not a file: {path!s}")
+
+        # 2. Initialize hasher
+        hasher = hashlib.sha256()
+
+        # 3. Read the file in chunks and update the hash
+        with path.open("rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                hasher.update(chunk)
+
+        # 4. Return the final hex digest
+        return hasher.hexdigest()

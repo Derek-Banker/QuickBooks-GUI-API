@@ -56,3 +56,11 @@ result = file_manager.time_since_modified(file_path)
 stop = datetime.now()
 logger.debug(f"Result: `{result}`")
 logger.info(f"Previous operation time: `{stop - start}`.\n")
+
+target = Path(r"C:\Users\Derek\CFS - Derek\Programming\Python\Collections-V4\Ingest Data\Data Export - All Invoices.CSV") 
+
+logger.info("=== Starting File Hashing ===")
+start = datetime.now()
+hash = file_manager.hash_file(target)
+stop = datetime.now()
+logger.info(f"File hashed in: `{stop - start}`\nResulting Hash: `{hash}`")

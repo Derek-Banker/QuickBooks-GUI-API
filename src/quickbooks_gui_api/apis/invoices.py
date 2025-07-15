@@ -231,13 +231,9 @@ class Invoices:
                 focus()
                 self.window_manager.send_input(keys=['y'])
 
-
-            # elif top_dialog_title == DATE_ERROR:
-            #     self.win_man.send_input(keys=['enter'])
-            #     self.win_man.send_input(keys=['esc'])
-            #     _find_invoice()
-
 # --- HELPERS END --------------------------------------------------------------------------
+
+        pre_existing_file_hash: str = ""
 
         loop_start = datetime.now()
         while len(queue) != 0:  
@@ -245,6 +241,9 @@ class Invoices:
             
             save_path = queue[0].export_path() 
             pre_existing_file = save_path.exists()
+
+            if pre_existing_file:
+                pre_existing_file_hash = self.file_manager.hash_file(save_path)
 
             start = datetime.now()
             if self.window_manager.top_dialog(self.app) == NEW_INVOICE_WINDOW.title or self.window_manager.top_dialog(self.app) == VIEWING_INVOICE_WINDOW.title:
@@ -267,11 +266,14 @@ class Invoices:
                 self.logger.debug("The report file, `%s`, exists.", save_path.name)
                 self.file_manager.wait_till_stable(save_path, self.MAX_INVOICE_SAVE_TIME)
                 self.logger.debug("The report file, `%s`, is stable.", save_path.name)
+               
                 if pre_existing_file:
-                    file_age = self.file_manager.time_since_modified(save_path)
-                    self.logger.warning("the file `%s` existed before the report was saved. The file was last modified `%.2f` second ago.", save_path.name, file_age)
-                    if  file_age >= self.ACCEPTABLE_FILE_AGE:
-                        error = ValueError(f"The report file is `{file_age}` seconds old. Which is older than ACCEPTABLE_FILE_AGE, `{self.ACCEPTABLE_FILE_AGE}`. This may indicate the file was already there and was not saved correctly.")
+                    self.logger.warning("The file `%s` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...", save_path.name)
+                    hashes_match = pre_existing_file_hash == self.file_manager.hash_file(save_path)
+                    time_since_modified = self.file_manager.time_since_modified(save_path)    
+
+                    if not hashes_match and (time_since_modified > self.ACCEPTABLE_FILE_AGE):
+                        error = ValueError(f"The files hash match `{hashes_match}` and the file's age `{time_since_modified}` is higher than the configured threshold `self.ACCEPTABLE_FILE_AGE`.")
                         self.logger.error(error)
                         raise error
 
