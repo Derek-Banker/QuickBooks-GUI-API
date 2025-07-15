@@ -187,6 +187,8 @@ class Reports:
 
         self.window.set_focus()
 
+# --- HELPERS START --------------------------------------------------------------------------
+
         def _memorized_reports():
             self.window.set_focus()
             self.window_manager.send_input(['alt', 'R'])
@@ -241,14 +243,19 @@ class Reports:
 
             self._handle_global_popups()
 
+# --- HELPERS END --------------------------------------------------------------------------
         
+        pre_existing_file_hash: str = ""
 
         self.logger.info("Entering save loop...")
         while len(queue) != 0:  
             _memorized_reports()
 
-            report_path = queue[0].export_path() 
-            pre_existing_file = report_path.exists()
+            save_path = queue[0].export_path() 
+            pre_existing_file = save_path.exists()
+
+            if pre_existing_file:
+                pre_existing_file_hash = self.file_manager.hash_file(save_path)
 
 
             if self.window_manager.top_dialog(self.app) == MEMORIZED_REPORTS_WINDOW.title:
@@ -270,29 +277,23 @@ class Reports:
 
             if self.window_manager.is_element_active(FILE_NAME_FIELD.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
                 self.logger.debug("`%s` Window is detected and focused...",SAVE_FILE_AS_WINDOW.title)
-                _save_file(report_path)
+                _save_file(save_path)
                 _handle_unwanted_dialog()
             else:
                 print("NOT DETECTED")
-             
-            # if self.window_manager.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
-            #     loading = True
-            #     while loading:
-            #         if self.window_manager.is_element_active(CANCEL_BUTTON.as_element(self.window), timeout=0.1):
-            #             self.logger.debug("The report `%s` is saving...", self.window_manager.top_dialog(self.app))
-            #             time.sleep(1)
-            #         else:
-            #             loading = False
 
-            if self.file_manager.wait_for_file(report_path, self.MAX_REPORT_SAVE_TIME):
-                self.logger.debug("The report file, `%s`, exists.", report_path.name)
-                self.file_manager.wait_till_stable(report_path, self.MAX_REPORT_SAVE_TIME)
-                self.logger.debug("The report file, `%s`, is stable.", report_path.name)
+            if self.file_manager.wait_for_file(save_path, self.MAX_REPORT_SAVE_TIME):
+                self.logger.debug("The report file, `%s`, exists.", save_path.name)
+                self.file_manager.wait_till_stable(save_path, self.MAX_REPORT_SAVE_TIME)
+                self.logger.debug("The report file, `%s`, is stable.", save_path.name)
+                
                 if pre_existing_file:
-                    file_age = self.file_manager.time_since_modified(report_path)
-                    self.logger.warning("the file `%s` existed before the report was saved. The file was last modified `%.2f` second ago.", report_path.name, file_age)
-                    if  file_age >= self.ACCEPTABLE_FILE_AGE:
-                        error = ValueError(f"The report file is `{file_age}` seconds old. Which is older than ACCEPTABLE_FILE_AGE, `{self.ACCEPTABLE_FILE_AGE}`. This may indicate the file was already there and was not saved correctly.")
+                    self.logger.warning("The file `%s` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...", save_path.name)
+                    hashes_match = pre_existing_file_hash == self.file_manager.hash_file(save_path)
+                    time_since_modified = self.file_manager.time_since_modified(save_path)    
+        
+                    if not hashes_match and (time_since_modified > self.ACCEPTABLE_FILE_AGE):
+                        error = ValueError(f"The files hash match `{hashes_match}` and the file's age `{time_since_modified}` is higher than the configured threshold `self.ACCEPTABLE_FILE_AGE`.")
                         self.logger.error(error)
                         raise error
                 

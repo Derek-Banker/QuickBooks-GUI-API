@@ -1,17 +1,17 @@
 # src\quickbooks_gui_api\models\invoice.py
 
 from pathlib import Path
-from quickbooks_gui_api.utilities import sanitize_file_name
+from quickbooks_gui_api.utilities import sanitize_file_name, ensure_file_extension
 
 class Invoice:
     def __init__(self,
                  number: str,
                  file_name: str | None,
-                 save_path: Path
+                 save_directory: Path
                 ) -> None:
-        self._number:       str  = number
-        self._file_name:    str  = sanitize_file_name( file_name if file_name is not None else number) + ".pdf"
-        self._save_path:    Path = save_path
+        self._number:           str  = number
+        self._file_name:        str  = sanitize_file_name( file_name if file_name is not None else number)
+        self._save_directory:   Path = save_directory
         
 
     @property
@@ -23,4 +23,4 @@ class Invoice:
         return self._file_name
     
     def export_path(self) -> Path:
-        return self._save_path.joinpath(self._file_name)
+        return ensure_file_extension(self._save_directory.joinpath(self._file_name),["pdf"])
