@@ -28,6 +28,10 @@ DATE_ERROR_POPUP:           Element = Element("Window", "Warning",              
 AVAILABLE_CREDITS_POPUP:    Element = Element("Window", "Available Credits",                                                None)
 CHANGED_TRANSACTION_POPUP:  Element = Element("Window", "Recording Transaction",                                            None)
 ESTIMATE_LINKED_POPUP:      Element = Element("Window", "Recording Transaction",                                            None)
+DATE_LOCKED_WINDOW:         Element = Element("Window", "QuickBooks",                                                       None)
+# CANCEL_UNLOCK:              Element = Element("Pane",   "Cancel",                                                           52)
+REVERT_BUTTON:              Element = Element("Pane",   "Revert",                                                           64)
+
 
 
 class Invoices:
@@ -121,13 +125,16 @@ class Invoices:
     ) -> None:
 
         queue: list[Invoice] = []
+        number_of_invoices: int
 
         if isinstance(invoices, Invoice):
             queue.append(invoices)
-            self.logger.debug("Single invoice detected, appending to queue.")
+            number_of_invoices = 1
+            self.logger.debug("Single invoice detected, added to queue.")
         else:
             queue = invoices
-            self.logger.debug("List detected. Appending `%i` to queue for processing.", len(invoices))
+            number_of_invoices = len(queue)
+            self.logger.debug("List detected. Appended `%i` record to queue for processing.", number_of_invoices)
 
         self.home()
 
@@ -154,7 +161,7 @@ class Invoices:
                     self.window_manager.send_input('tab')
                     remaining_attempts -= 1
 
-                self.logger.info("Invoice number field is active, inserting number.")
+                self.logger.debug("Invoice number field is active, inserting number.")
                 self.window_manager.send_input(string=queue[0].number)
                 FIND_BUTTON.as_element(self.window).click_input()
             else:
@@ -231,12 +238,18 @@ class Invoices:
                 focus()
                 self.window_manager.send_input(keys=['y'])
 
+            elif top_dialog_title == DATE_LOCKED_WINDOW.title:
+                focus()
+                self.window_manager.send_input(keys=['esc'])
+                REVERT_BUTTON.as_element(self.window).click_input()
+
 # --- HELPERS END --------------------------------------------------------------------------
 
         pre_existing_file_hash: str = ""
 
         loop_start = datetime.now()
-        while len(queue) != 0:  
+        while len(queue) != 0:      
+            self.logger.info("Now saving invoice `%i`/`%i`...", ((number_of_invoices-len(queue)) + 1), number_of_invoices )
             self.window.set_focus()
             
             save_path = queue[0].export_path() 
@@ -282,6 +295,8 @@ class Invoices:
                 self.logger.info(f"Invoice number `{queue[0].number}` saved in: `{stop - start}`.\n")
                 queue.remove(queue[0]) 
 
+        self.home()
+        
         loop_end = datetime.now()
         self.logger.info(f"All invoices saved in: `{loop_end - loop_start}`.")
 
