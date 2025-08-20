@@ -9,9 +9,9 @@ from toml_init  import EncryptionManager
 from pathlib    import Path
 
 from typing     import Final, Any
-from pywinauto  import Application, WindowSpecification
+from pywinauto  import Application, WindowSpecification, findwindows, timings, win32functions, win32defines
 
-from quickbooks_gui_api.models      import Invoice, Report
+from quickbooks_gui_api.models      import Invoice, Report, Element
 from quickbooks_gui_api.managers    import Color, ProcessManager, WindowManager, StringManager, Helper
 
 
@@ -20,9 +20,14 @@ LOGIN:              Final[str] = "QuickBooks Desktop Login"
 
 cwd = Path(os.getcwd())
 
-DEFAULT_CONFIG_FOLDER_PATH: Final[Path] = cwd.joinpath("configs")
+DEFAULT_CONFIG_FOLDER_PATH:         Final[Path] = cwd.joinpath("configs")
 DEFAULT_CONFIG_DEFAULT_FOLDER_PATH: Final[Path] = DEFAULT_CONFIG_FOLDER_PATH.joinpath("defaults")
-DEFAULT_CONFIG_FILE_NAME: Final[str] = "config.toml"
+DEFAULT_CONFIG_FILE_NAME:           Final[str]  = "config.toml"
+
+COMPANY_FILE_WINDOW:    Element = Element("Window",     "No QuickBooks Company Loaded",     65280)
+USERNAME_FIELD:         Element = Element("Edit",       None,                               15922)
+PASSWORD_FIELD:         Element = Element("Edit",       None,                               15924)
+MULTI_USER_FILE:        Element = Element("Window",     "QuickBooks Desktop Information",   None)
 
 QUICKBOOKS_PROCESSES:   list[str] = [
                                      "QBW.EXE", 
@@ -81,7 +86,7 @@ class QuickBookGUIAPI:
         return config
 
     def _load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
-        self.logger.info("Attempting to load in sensitive data points in from config...")
+        self.logger.debug("Attempting to load in sensitive data points in from config...")
 
         try:
             key_name   = config["QuickBooksGUIAPI.secrets"]["KEY_NAME"]
@@ -120,13 +125,13 @@ class QuickBookGUIAPI:
             raise error
 
         else:
-            self.logger.info("Stored hash matches that of the environment key, proceeding with decryption...")
+            self.logger.debug("Stored hash matches that of the environment key, proceeding with decryption...")
             fer_key = em.derive_key(key,salt)
 
             return em.decrypt(username,fer_key), em.decrypt(password,fer_key)
         
     def _start_quickbooks(self) -> bool:
-        self.logger.info("Starting QuickBooks if not already running...")
+        self.logger.debug("Starting QuickBooks if not already running...")
         
         if not self.process_manager.is_running(path = Path(self.exe_path)):
             self.logger.debug("QuickBook was not running. Attempting to start...")
@@ -153,7 +158,7 @@ class QuickBookGUIAPI:
         self._terminate_processes(AVATAX_PROCESSES)
     
     def _connect_to_app(self) -> tuple[Application, WindowSpecification]:
-        self.logger.info("Attempting to connect pywinauto to application...")
+        self.logger.debug("Attempting to connect pywinauto to application...")
         try:
             self.app = Application(backend='uia').connect(path=self.exe_path)
             self.window = self.app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
@@ -165,10 +170,12 @@ class QuickBookGUIAPI:
 
     
     def _select_company_file(self, window: WindowSpecification) -> None:
-        self.logger.info("Company file selection step detected...")
+        self.logger.debug("Company file selection step detected...")
         window.set_focus()
 
         company_file_window = window.child_window(title = "No QuickBooks Company Loaded", auto_id = "65280")
+
+        
 
         correct_company, selected_company, match_confidence =   self.helper.capture_isolate_ocr_match(
                                                                     company_file_window, 
@@ -181,7 +188,7 @@ class QuickBookGUIAPI:
                                                                 )
 
         if correct_company:
-            self.logger.info(f"ORC'd selected company `{selected_company}` file sufficiently matches target `{self.company_file_name}`.")
+            self.logger.debug(f"ORC'd selected company `{selected_company}` file sufficiently matches target `{self.company_file_name}`.")
             self.window_manager.send_input("enter")
             time.sleep(self.company_file_load_delay)
         else:
@@ -189,18 +196,35 @@ class QuickBookGUIAPI:
             raise ValueError
 
     def _login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
-            self.logger.info("User login step detected...")
+            self.logger.debug("User login step detected...")
             username, password = self._load_config_sensitive(config)
 
             window.set_focus()
             self.window_manager.send_input(["alt","u"])
             self.helper.safely_set_text(username, root=window, control_type = "Edit", auto_id = "15922") # type: ignore
 
+
+
             self.window_manager.send_input(["alt","p"])
             self.helper.safely_set_text(password, root=window, control_type = "Edit", auto_id = "15924") # type: ignore
             
             self.window_manager.send_input("enter")
+
+            self._handle_popups()
             time.sleep(self.login_delay)
+
+    def _handle_popups(self):
+        top_dialog_title = self.window_manager.top_dialog(self.app)
+
+        def focus():
+            self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
+            unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
+            unwanted_dialog.set_focus()    
+
+        if top_dialog_title == MULTI_USER_FILE.title:
+            focus()
+            self.window_manager.send_input(keys=['alt', 'n'])
+
 
     def _terminate_processes(self, processes: list[str]) -> None:
         for process in processes:
@@ -222,8 +246,30 @@ class QuickBookGUIAPI:
         config = self._load_config_basic(config_directory, config_file_name)
 
         self._start_quickbooks()
-
         app, window = self._connect_to_app()
+
+        window.set_focus()
+
+        main_window_spec = app.window(title_re=".*QuickBooks Enterprise Solutions.*")
+        try:
+            main_window_wrapper = main_window_spec.wait('exists')
+
+            if main_window_wrapper.is_minimized():
+                self.logger.info("QuickBooks window is minimized. Restoring it...")
+                # The UIA restore() can fail with a COMError. Using the lower-level
+                # ShowWindow function is more reliable for this operation.
+                win32functions.ShowWindow(main_window_wrapper.handle, win32defines.SW_RESTORE)
+                time.sleep(0.5)  # Give a moment for the window to draw
+
+            main_window_wrapper.set_focus()
+            self.logger.debug("Main window is ready and focused.")
+
+            # Update self.window and the local `window` to the spec we know works.
+            self.window = window = main_window_spec
+
+        except (findwindows.ElementNotFoundError, timings.TimeoutError) as e:
+            self.logger.error(f"Could not find or restore the main QuickBooks window: {e}")
+            raise RuntimeError("Failed to find main QuickBooks window after launch.") from e
 
         if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
            self._select_company_file(window)
@@ -233,6 +279,8 @@ class QuickBookGUIAPI:
 
         if kill_avatax:
             self._kill_avatax()
+
+        window.set_focus()
         
         return app, window
 

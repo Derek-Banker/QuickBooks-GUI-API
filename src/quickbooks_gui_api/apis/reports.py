@@ -2,12 +2,12 @@
 import logging
 import pytomlpp
 
-from pathlib import Path
-from pywinauto import Application, WindowSpecification
+from datetime   import datetime
+from pathlib    import Path
+from pywinauto  import Application, WindowSpecification
 
-from quickbooks_gui_api.managers import WindowManager, FileManager
-from quickbooks_gui_api.models import Report, Element
-
+from quickbooks_gui_api.managers            import WindowManager, FileManager
+from quickbooks_gui_api.models              import Report, Element
 from quickbooks_gui_api.apis.api_exceptions import ConfigFileNotFound
 
 
@@ -174,13 +174,16 @@ class Reports:
     ) -> None:
 
         queue: list[Report] = []
+        number_of_reports: int
 
         if isinstance(reports, Report):
             queue.append(reports)
-            self.logger.debug("Single report detected, appending to queue.")
+            number_of_reports = 1
+            self.logger.debug("Single report detected, added to queue.")
         else:
             queue = reports
-            self.logger.debug("List detected. Appending `%i` to queue for processing.", len(reports))
+            number_of_reports = len(queue)
+            self.logger.debug("List detected. Appended `%i` record to queue for processing.", number_of_reports)
 
         self._handle_global_popups()
         self.home(True)
@@ -246,6 +249,7 @@ class Reports:
 # --- HELPERS END --------------------------------------------------------------------------
         
         pre_existing_file_hash: str = ""
+        loop_start = datetime.now()
 
         self.logger.info("Entering save loop...")
         while len(queue) != 0:  
@@ -257,7 +261,7 @@ class Reports:
             if pre_existing_file:
                 pre_existing_file_hash = self.file_manager.hash_file(save_path)
 
-
+            start = datetime.now()
             if self.window_manager.top_dialog(self.app) == MEMORIZED_REPORTS_WINDOW.title:
                 self.logger.debug("Memorized report list is detected and focused...") 
                 _find_report()
@@ -297,9 +301,14 @@ class Reports:
                         self.logger.error(error)
                         raise error
                 
+                stop = datetime.now()
+                self.logger.info(f"Report `{queue[0].name}` saved in: `{stop - start}`.\n")
                 _handle_unwanted_dialog()
                 self.home()
                 queue.remove(queue[0])    
 
         self.home(True)
+
+        loop_end = datetime.now()
+        self.logger.info(f"Reports saved in: `{loop_end - loop_start}`.")
 

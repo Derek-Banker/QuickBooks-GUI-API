@@ -6,21 +6,21 @@ version = "0.1.0"
 
 [QuickBooksGUIAPI]
 SHOW_TOASTS = true
-STRING_MATCH_THRESHOLD  = { defaultValue = 85.0, type = "float", min = 80.0, max = 100.0 }
-REPORT_NAME_MATCH_THRESHOLD = { defaultValue = 85.0, type = "float", min = 70.0, max = 100.0 }
-PROCESS_START_DELAY     = { defaultValue = 5.0,  type = "float", min = 3.0 }
-MAX_REPORT_SAVE_TIME     = { defaultValue = 180.0,type = "float", min = 0.0 }
-MAX_INVOICE_SAVE_TIME   = { defaultValue = 10.0,type = "float", min = 0.0 }
-COMPANY_FILE_LOAD_DELAY = { defaultValue = 5.0,  type = "float", min = 3.0 }
-LOGIN_DELAY             = { defaultValue = 25.0, type = "float", min = 10.0 }
-QUICKBOOKS_WINDOW_NAME  = { defaultValue = " - Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0", type = "str" }  
-WINDOW_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
-DIALOG_LOAD_DELAY       = { defaultValue = 0.5,  type = "float", min = 0.0 }
-NAVIGATION_DELAY        = { defaultValue = 0.15, type = "float", min = 0.0 }
-ACCEPTABLE_FILE_AGE     = { defaultValue = 2.0 , type = "float", min = 1.0 }
-VALID_INVOICE_PRINTER   = { defaultValue = "Microsoft Print to PDF on PORTPROMPT:", type = "str" }
-QB_EXE_PATH             = { defaultValue = "UNINITIALIZED", type = "str" }
-COMPANY_FILE_NAME       = { defaultValue = "UNINITIALIZED", type = "str" }
+STRING_MATCH_THRESHOLD      = { defaultValue = 85.0,    type = "float",     min = 80.0, max = 100.0 }
+REPORT_NAME_MATCH_THRESHOLD = { defaultValue = 85.0,    type = "float",     min = 70.0, max = 100.0 }
+PROCESS_START_DELAY         = { defaultValue = 10.0,    type = "float",     min = 3.0   }
+MAX_REPORT_SAVE_TIME        = { defaultValue = 240.0,   type = "float",     min = 0.0   }
+MAX_INVOICE_SAVE_TIME       = { defaultValue = 10.0,    type = "float",     min = 0.0   }
+COMPANY_FILE_LOAD_DELAY     = { defaultValue = 10.0,    type = "float",     min = 3.0   }
+LOGIN_DELAY                 = { defaultValue = 50.0,    type = "float",     min = 10.0  }
+WINDOW_LOAD_DELAY           = { defaultValue = 0.5,     type = "float",     min = 0.0   }
+DIALOG_LOAD_DELAY           = { defaultValue = 0.5,     type = "float",     min = 0.0   }
+NAVIGATION_DELAY            = { defaultValue = 0.15,    type = "float",     min = 0.0   }
+ACCEPTABLE_FILE_AGE         = { defaultValue = 2.0 ,    type = "float",     min = 1.0   }
+QB_EXE_PATH                 = { defaultValue = "UNINITIALIZED", type = "str" }
+COMPANY_FILE_NAME           = { defaultValue = "UNINITIALIZED", type = "str" }
+VALID_INVOICE_PRINTER       = { defaultValue = "Microsoft Print to PDF on PORTPROMPT:", type = "str" }
+QUICKBOOKS_WINDOW_NAME      = { defaultValue = " - Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0", type = "str" }  
 
 ["QuickBooksGUIAPI.secrets"]
 KEY_NAME    = { defaultValue = "KEY",           type = "str" } 

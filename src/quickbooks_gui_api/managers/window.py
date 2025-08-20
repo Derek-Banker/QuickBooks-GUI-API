@@ -5,6 +5,7 @@ import logging
 import win32gui
 from ctypes.wintypes import RECT
 import pyautogui
+import pywinauto
 import pywinauto.mouse
 import pywinauto.timings
 
@@ -50,8 +51,8 @@ class WindowManager:
                 if isinstance(main_spec, UIAWrapper)
                 else main_spec.wrapper_object()
             )
-        except Exception as e:
-            raise RuntimeError(f"Could not wrap main QuickBooks window: {e}")
+        except (pywinauto.findwindows.ElementNotFoundError, pywinauto.timings.TimeoutError) as e:
+            raise RuntimeError(f"Could not wrap main QuickBooks window: {e}") from e
 
         titles: List[str] = []
         seen = set()
@@ -173,13 +174,14 @@ class WindowManager:
 
         main_spec = app.window(title_re=".*QuickBooks.*")
         try:
-            main_wrap: UIAWrapper = (
-                main_spec
-                if isinstance(main_spec, UIAWrapper)
-                else main_spec.wrapper_object()
-            )
-        except Exception as e:
-            raise RuntimeError(f"Could not wrap main QuickBooks window: {e}")
+            # Wait for the main window to exist before proceeding. This handles
+            # transient states, like after login when the main window is re-loading.
+            # It will use the global pywinauto timeout.
+            main_wrap = main_spec.wait('exists')
+        except pywinauto.timings.TimeoutError:
+            self.logger.warning("Main QuickBooks window not found while searching for popups (timed out). This is likely normal during window transitions.")
+            # If the main window isn't found, there can't be a dialog on top of it.
+            return ""
 
         dialogs: list[tuple[int, UIAWrapper]] = []
 
