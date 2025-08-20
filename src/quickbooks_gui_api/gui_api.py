@@ -9,7 +9,7 @@ from toml_init  import EncryptionManager
 from pathlib    import Path
 
 from typing     import Final, Any
-from pywinauto  import Application, WindowSpecification
+from pywinauto  import Application, WindowSpecification, findwindows, timings, win32functions, win32defines
 
 from quickbooks_gui_api.models      import Invoice, Report, Element
 from quickbooks_gui_api.managers    import Color, ProcessManager, WindowManager, StringManager, Helper
@@ -246,8 +246,30 @@ class QuickBookGUIAPI:
         config = self._load_config_basic(config_directory, config_file_name)
 
         self._start_quickbooks()
-
         app, window = self._connect_to_app()
+
+        window.set_focus()
+
+        main_window_spec = app.window(title_re=".*QuickBooks Enterprise Solutions.*")
+        try:
+            main_window_wrapper = main_window_spec.wait('exists')
+
+            if main_window_wrapper.is_minimized():
+                self.logger.info("QuickBooks window is minimized. Restoring it...")
+                # The UIA restore() can fail with a COMError. Using the lower-level
+                # ShowWindow function is more reliable for this operation.
+                win32functions.ShowWindow(main_window_wrapper.handle, win32defines.SW_RESTORE)
+                time.sleep(0.5)  # Give a moment for the window to draw
+
+            main_window_wrapper.set_focus()
+            self.logger.debug("Main window is ready and focused.")
+
+            # Update self.window and the local `window` to the spec we know works.
+            self.window = window = main_window_spec
+
+        except (findwindows.ElementNotFoundError, timings.TimeoutError) as e:
+            self.logger.error(f"Could not find or restore the main QuickBooks window: {e}")
+            raise RuntimeError("Failed to find main QuickBooks window after launch.") from e
 
         if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
            self._select_company_file(window)
@@ -257,6 +279,8 @@ class QuickBookGUIAPI:
 
         if kill_avatax:
             self._kill_avatax()
+
+        window.set_focus()
         
         return app, window
 
