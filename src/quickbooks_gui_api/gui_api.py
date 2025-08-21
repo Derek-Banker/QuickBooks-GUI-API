@@ -49,11 +49,6 @@ class QuickBookGUIAPI:
                  ) -> None:
         if logger is None:
             self.logger = logging.getLogger(__name__)
-        else:
-            if isinstance(logger, logging.Logger):
-                self.logger = logger 
-            else:
-                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
         
         self.process_manager = ProcessManager()
         self.string_manager = StringManager()
