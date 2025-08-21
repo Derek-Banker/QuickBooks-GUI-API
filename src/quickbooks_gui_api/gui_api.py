@@ -45,7 +45,7 @@ AVATAX_PROCESSES:       list[str] = [
 class QuickBookGUIAPI:
 
     def __init__(self,
-                 logger: logging.Logger | None = None
+                 logger: Any | None = None
                  ) -> None:
         if logger is None:
             self.logger = logging.getLogger(__name__)
