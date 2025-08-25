@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 # --- BOILER --------------------------------------------------------------------
 
 from quickbooks_gui_api import QuickBookGUIAPI
+from quickbooks_gui_api.utilities import LogManager
 
-gui_api = QuickBookGUIAPI()
+
+gui_api = QuickBookGUIAPI(logger=LogManager.get_logger(__name__))
 
 try:
     logger.info("Attempting pre-test shutdown to clean up old processes...")
