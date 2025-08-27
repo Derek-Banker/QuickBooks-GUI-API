@@ -158,7 +158,7 @@ class QuickBookGUIAPI:
         self.logger.debug("Attempting to connect pywinauto to application...")
         try:
             self.app = Application(backend='uia').connect(path=self.exe_path)
-            self.window = self.app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
+            self.window = self.app.window(title_re=".*QuickBooks.*")
         except Exception:
             self.logger.exception
             raise

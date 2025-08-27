@@ -21,10 +21,3 @@ QB_EXE_PATH                 = { defaultValue = "UNINITIALIZED", type = "str" }
 COMPANY_FILE_NAME           = { defaultValue = "UNINITIALIZED", type = "str" }
 VALID_INVOICE_PRINTER       = { defaultValue = "Microsoft Print to PDF on PORTPROMPT:", type = "str" }
 QUICKBOOKS_WINDOW_NAME      = { defaultValue = " - Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0", type = "str" }  
-
-["QuickBooksGUIAPI.secrets"]
-KEY_NAME    = { defaultValue = "KEY",           type = "str" } 
-SALT        = { defaultValue = "UNINITIALIZED", type = "str" }
-HASH        = { defaultValue = "UNINITIALIZED", type = "str" }
-USERNAME    = { defaultValue = "UNINITIALIZED", type = "str" }
-PASSWORD    = { defaultValue = "UNINITIALIZED", type = "str" }
