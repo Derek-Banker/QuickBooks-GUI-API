@@ -3,6 +3,8 @@
 import time
 import logging
 import pytomlpp
+
+from typing import Any
 from pathlib import Path
 from datetime import datetime
 
@@ -46,15 +48,9 @@ class Invoices:
                  application: Application,
                  window: WindowSpecification,
                  config_path: Path | None = Path(r"configs\config.toml"),
-                 logger: logging.Logger | None = None
+                 logger: Any = logging.getLogger(__name__)
                  ) -> None:
-        if logger is None:
-            self.logger = logging.getLogger(__name__)
-        else:
-            if isinstance(logger, logging.Logger):
-                self.logger = logger 
-            else:
-                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+        self.logger = logger
             
         if config_path is None:
             if Path(r"configs\config.toml").is_file():

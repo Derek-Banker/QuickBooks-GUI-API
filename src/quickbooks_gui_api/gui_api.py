@@ -45,10 +45,9 @@ AVATAX_PROCESSES:       list[str] = [
 class QuickBookGUIAPI:
 
     def __init__(self,
-                 logger: Any | None = None
+                 logger: Any = logging.getLogger(__name__)
                  ) -> None:
-        if logger is None:
-            self.logger = logging.getLogger(__name__)
+        self.logger = logger
         
         self.process_manager = ProcessManager()
         self.string_manager = StringManager()
@@ -79,51 +78,6 @@ class QuickBookGUIAPI:
             raise e
         
         return config
-
-    def _load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
-        self.logger.debug("Attempting to load in sensitive data points in from config...")
-
-        try:
-            key_name   = config["QuickBooksGUIAPI.secrets"]["KEY_NAME"]
-            hash       = config["QuickBooksGUIAPI.secrets"]["HASH"]
-            salt       = config["QuickBooksGUIAPI.secrets"]["SALT"]
-            username   = config["QuickBooksGUIAPI.secrets"]["USERNAME"]
-            password   = config["QuickBooksGUIAPI.secrets"]["PASSWORD"]
-        except KeyError:
-            e = KeyError("KeyError raised when attempting to retrieve `QuickBooksGUIAPI.secrets`. There is a problem with the config file. If you have not already, use setup to set the encrypted secrets.")
-            self.logger.error(e)
-            raise e
-
-        import dotenv
-        dotenv.load_dotenv()
-
-        try:
-            key = os.getenv(key_name)
-        except KeyError:
-            e = KeyError(f"KeyError raised when attempting to the retrieve 'KEY_NAME' environmental variable, set as `{key_name}` in the config file.")
-            self.logger.error(e)
-            raise e
-        
-        confidential_data = [key, hash, salt, username, password]
-
-        if ("UNINITIALIZED" in confidential_data) or (None in confidential_data) or key is None:
-            error = ValueError("At lease one of the confidential references is `UNINITIALIZED` or `None`.")
-            self.logger.error(error)
-            raise error
-
-        em = EncryptionManager()
-
-    
-        if em.hash(key,salt) != hash:
-            error = ValueError(f"The `HASH` value pulled from the config file is not a hash of the `{key_name}` environmental variable.")
-            self.logger.error(error)
-            raise error
-
-        else:
-            self.logger.debug("Stored hash matches that of the environment key, proceeding with decryption...")
-            fer_key = em.derive_key(key,salt)
-
-            return em.decrypt(username,fer_key), em.decrypt(password,fer_key)
         
     def _start_quickbooks(self) -> bool:
         self.logger.debug("Starting QuickBooks if not already running...")
@@ -156,7 +110,7 @@ class QuickBookGUIAPI:
         self.logger.debug("Attempting to connect pywinauto to application...")
         try:
             self.app = Application(backend='uia').connect(path=self.exe_path)
-            self.window = self.app.window(title_re=".*Intuit QuickBooks Enterprise Solutions: Manufacturing and Wholesale 24.0.*")
+            self.window = self.app.window(title_re=".*QuickBooks.*")
         except Exception:
             self.logger.exception
             raise
@@ -190,10 +144,9 @@ class QuickBookGUIAPI:
             self.logger.error(f"Unrecognized company file `{selected_company}` currently selected. Match confidence is {match_confidence} with target `{self.company_file_name}`.")
             raise ValueError
 
-    def _login(self, window: WindowSpecification, config: dict[str, Any]) -> None:
+    def _login(self, window: WindowSpecification, username: str, password: str) -> None:
             self.logger.debug("User login step detected...")
-            username, password = self._load_config_sensitive(config)
-
+        
             window.set_focus()
             self.window_manager.send_input(["alt","u"])
             self.helper.safely_set_text(username, root=window, control_type = "Edit", auto_id = "15922") # type: ignore
@@ -232,10 +185,12 @@ class QuickBookGUIAPI:
         self.logger.info("All provided processes have been terminated.")
 
     def startup(self, 
+            username: str,
+            password: str,
             config_directory: Path = DEFAULT_CONFIG_FOLDER_PATH, 
             config_file_name: str = DEFAULT_CONFIG_FILE_NAME,
             kill_avatax: bool = True
-        ) -> tuple[Application, WindowSpecification]:
+        ) -> tuple[Application, WindowSpecification]:  
         self.logger.info("Entering startup routine...")
 
         config = self._load_config_basic(config_directory, config_file_name)
@@ -270,7 +225,7 @@ class QuickBookGUIAPI:
            self._select_company_file(window)
             
         if self.string_manager.is_match_in_list(LOGIN, self.window_manager.get_all_dialog_titles(app), 95.0):    
-            self._login(window, config)
+            self._login(window, username, password)
 
         if kill_avatax:
             self._kill_avatax()
