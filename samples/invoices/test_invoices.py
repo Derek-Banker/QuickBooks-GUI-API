@@ -1,22 +1,17 @@
 # --- BOILER --------------------------------------------------------------------
+import time
 from pathlib import Path
-from datetime import datetime
 
-from typing import List, Dict
-
-import logging
-GLOBAL_FMT = "%(asctime)s | %(levelname)s | %(module)s:%(funcName)s:%(lineno)d | %(message)s"
-logging.basicConfig(
-    level    = logging.DEBUG,
-    format   = GLOBAL_FMT,
-    handlers = [logging.StreamHandler()]  # you can omit handlers if you just want the default stream
-)
-logger = logging.getLogger(__name__)
+from quickbooks_gui_api.utilities import LogManager
+logger = LogManager.get_logger(__name__)
 # --- BOILER --------------------------------------------------------------------
 
 from quickbooks_gui_api import QuickBookGUIAPI
 from quickbooks_gui_api.apis import Invoices
 from quickbooks_gui_api.models import Invoice
+
+USERNAME = ""
+PASSWORD = ""
 
 invoices: list =    [
                      5786,
@@ -29,16 +24,18 @@ invoices: list =    [
                      17677,
                     ]
 
-main = QuickBookGUIAPI() 
-app, window = main.startup()
-main._kill_avatax()
+# If you have not already initalized the config you have to run this before the first run or after any config directory changes. 
+# ConfigInit(logger=logger)
 
-invoice_objects: List[Invoice] = []
+main = QuickBookGUIAPI() 
+app, window = main.startup(USERNAME, PASSWORD)
+
+invoice_objects: list[Invoice] = []
 
 for invoice in invoices:
     invoice_objects.append(Invoice(str(invoice), None, Path(r"C:\Users\Derek\CFS - Derek\Holding")))
 
-invoice_saver = Invoices(app, window)
+invoice_saver = Invoices(app, window, logger=logger)
 invoice_saver.save(invoice_objects)
 
 main.shutdown()
