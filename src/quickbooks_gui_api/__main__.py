@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-import logging
-import sys
 from pathlib import Path
 
 import click
@@ -15,7 +13,6 @@ from quickbooks_gui_api.gui_api import (
     DEFAULT_CONFIG_FOLDER_PATH,
     DEFAULT_CONFIG_FILE_NAME,
 )
-from quickbooks_gui_api.setup import Setup
 
 
 @click.group()
@@ -91,175 +88,6 @@ def setup(ctx: click.Context, log_level: str) -> None:  # pragma: no cover - CLI
     ctx.ensure_object(dict)
     ctx.obj["log_level"] = log_level
 
-
-# @setup.command("set-credentials")
-# @click.option("--username", "-u", required=True, help="Username to encrypt and store")
-# @click.option("--password", "-p", required=True, help="Password to encrypt and store")
-# @click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
-# @click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
-# @click.option(
-#     "--config-path",
-#     "-c-path",
-#     type=click.Path(path_type=Path),
-#     default=Path("configs/config.toml"),
-#     show_default=True,
-#     help="Path to config TOML",
-# )
-# @click.option(
-#     "--config-index",
-#     "-c-index",
-#     default="QuickBooksGUIAPI.secrets",
-#     show_default=True,
-#     help="Config section/table name",
-# )
-# @click.pass_context
-# def set_credentials(
-#     ctx: click.Context,
-#     username: str,
-#     password: str,
-#     local_key_name: str | None,
-#     local_key_value: str | None,
-#     config_path: Path,
-#     config_index: str,
-# ) -> None:
-#     """Set credentials in the config file."""
-
-#     if (local_key_name is None) == (local_key_value is None):
-#         raise click.UsageError(
-#             "Exactly one of (--local-key-name | -lkn) or (--local-key-value | -lkv) must be provided."
-#         )
-
-#     logging.basicConfig(
-#         level=getattr(logging, ctx.obj["log_level"]),
-#         format="%(asctime)s - %(levelname)s - %(message)s",
-#     )
-#     setup_obj = Setup(config_index=config_index)
-#     try:
-#         setup_obj.set_credentials(
-#             username=username,
-#             password=password,
-#             local_key_name=local_key_name,
-#             local_key_value=local_key_value,
-#             config_path=config_path,
-#         )
-#         click.echo("Credentials set successfully.")
-#     except Exception as e:  # pragma: no cover - CLI
-#         logging.error(f"Operation failed: {e}")
-#         sys.exit(2)
-
-
-# @setup.command("prompt-credentials")
-# @click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
-# @click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
-# @click.option(
-#     "--config-path",
-#     "-c-path",
-#     type=click.Path(path_type=Path),
-#     default=Path("configs/config.toml"),
-#     show_default=True,
-#     help="Path to config TOML",
-# )
-# @click.option(
-#     "--config-index",
-#     "-c-index",
-#     default="QuickBooksGUIAPI.secrets",
-#     show_default=True,
-#     help="Config section/table name",
-# )
-# @click.pass_context
-# def set_credentials_prompt(
-#     ctx: click.Context,
-#     local_key_name: str | None,
-#     local_key_value: str | None,
-#     config_path: Path,
-#     config_index: str,
-# ) -> None:
-#     """Prompt for credentials and set the config file."""
-
-#     username = click.prompt("Username")
-#     password = click.prompt(
-#         "Password",
-#         hide_input=True,
-#         confirmation_prompt=True,
-#     )
-
-#     if (local_key_name is None) == (local_key_value is None):
-#         raise click.UsageError(
-#             "Exactly one of (--local-key-name | -lkn) or (--local-key-value | -lkv) must be provided."
-#         )
-
-#     logging.basicConfig(
-#         level=getattr(logging, ctx.obj["log_level"]),
-#         format="%(asctime)s - %(levelname)s - %(message)s",
-#     )
-#     setup_obj = Setup(config_index=config_index)
-#     try:
-#         setup_obj.set_credentials(
-#             username=username,
-#             password=password,
-#             local_key_name=local_key_name,
-#             local_key_value=local_key_value,
-#             config_path=config_path,
-#         )
-#         click.echo("Credentials set successfully.")
-#     except Exception as e:  # pragma: no cover - CLI
-#         logging.error(f"Operation failed: {e}")
-#         sys.exit(2)
-
-
-# @setup.command("verify-credentials")
-# @click.option("--local-key-name", "-lkn", default=None, help="Environment variable name for the encryption key")
-# @click.option("--local-key-value", "-lkv", default=None, help="Encryption key value (direct input)")
-# @click.option(
-#     "--config-path",
-#     "-c-path",
-#     type=click.Path(path_type=Path),
-#     default=Path("configs/config.toml"),
-#     show_default=True,
-#     help="Path to config TOML",
-# )
-# @click.option(
-#     "--config-index",
-#     "-c-index",
-#     default="QuickBooksGUIAPI.secrets",
-#     show_default=True,
-#     help="Config section/table name",
-# )
-# @click.pass_context
-# def verify_credentials(
-#     ctx: click.Context,
-#     local_key_name: str | None,
-#     local_key_value: str | None,
-#     config_path: Path,
-#     config_index: str,
-# ) -> None:
-#     """Verify credentials using the provided key."""
-
-#     if (local_key_name is None) == (local_key_value is None):
-#         raise click.UsageError(
-#             "Exactly one of --local-key-name or --local-key-value must be provided."
-#         )
-
-#     logging.basicConfig(
-#         level=getattr(logging, ctx.obj["log_level"]),
-#         format="%(asctime)s - %(levelname)s - %(message)s",
-#     )
-#     setup_obj = Setup(config_index=config_index)
-#     try:
-#         valid = setup_obj.verify_credentials(
-#             local_key_name=local_key_name,
-#             local_key_value=local_key_value,
-#             config_path=config_path,
-#         )
-#         if valid:
-#             click.echo("Key is valid.")
-#             sys.exit(0)
-#         else:
-#             click.echo("Key is INVALID.")
-#             sys.exit(1)
-#     except Exception as e:  # pragma: no cover - CLI
-#         logging.error(f"Operation failed: {e}")
-#         sys.exit(2)
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI

@@ -3,12 +3,12 @@
 from importlib.metadata import version as _version
 
 from .gui_api import QuickBookGUIAPI
-from .setup import Setup
+from .config_init import ConfigInit
 
 __version__ = _version("qb-gui-api")
 
 __all__ = [
            "QuickBookGUIAPI",
-           "Setup",
+           "ConfigInit",
            "__version__",
           ]

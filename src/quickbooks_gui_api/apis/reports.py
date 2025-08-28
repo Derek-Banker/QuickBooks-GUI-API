@@ -2,6 +2,7 @@
 import logging
 import pytomlpp
 
+from typing     import Any
 from datetime   import datetime
 from pathlib    import Path
 from pywinauto  import Application, WindowSpecification
@@ -38,19 +39,15 @@ class Reports:
     """
 
 
-    def __init__(self,
-                 application: Application,
-                 window: WindowSpecification,
-                 config_path: Path | None = Path(r"configs\config.toml"),
-                 logger: logging.Logger | None = None
-                 ) -> None:
-        if logger is None:
-            self.logger = logging.getLogger(__name__)
-        else:
-            if isinstance(logger, logging.Logger):
-                self.logger = logger 
-            else:
-                raise TypeError("Provided parameter `logger` is not an instance of `logging.Logger`.")
+    def __init__(
+            self,
+            application: Application,
+            window: WindowSpecification,
+            config_path: Path | None = Path(r"configs\config.toml"),
+            logger: Any = logging.getLogger(__name__)
+            ) -> None:
+        self.logger = logger 
+            
             
         if config_path is None:
             if Path(r"configs\config.toml").is_file():
@@ -284,7 +281,7 @@ class Reports:
                 _save_file(save_path)
                 _handle_unwanted_dialog()
             else:
-                print("NOT DETECTED")
+                self.logger.error("NOT DETECTED")
 
             if self.file_manager.wait_for_file(save_path, self.MAX_REPORT_SAVE_TIME):
                 self.logger.debug("The report file, `%s`, exists.", save_path.name)
@@ -300,6 +297,8 @@ class Reports:
                         error = ValueError(f"The files hash match `{hashes_match}` and the file's age `{time_since_modified}` is higher than the configured threshold `self.ACCEPTABLE_FILE_AGE`.")
                         self.logger.error(error)
                         raise error
+                    
+                    
                 
                 stop = datetime.now()
                 self.logger.info(f"Report `{queue[0].name}` saved in: `{stop - start}`.\n")

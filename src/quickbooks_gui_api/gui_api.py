@@ -45,12 +45,9 @@ AVATAX_PROCESSES:       list[str] = [
 class QuickBookGUIAPI:
 
     def __init__(self,
-                 logger: Any | None = None
+                 logger: Any = logging.getLogger(__name__)
                  ) -> None:
-        if logger is None:
-            self.logger = logging.getLogger(__name__)
-        else:
-            self.logger = logger
+        self.logger = logger
         
         self.process_manager = ProcessManager()
         self.string_manager = StringManager()
@@ -81,51 +78,6 @@ class QuickBookGUIAPI:
             raise e
         
         return config
-
-    # def _load_config_sensitive(self, config: dict[str, Any]) -> tuple[str, str]:
-    #     self.logger.debug("Attempting to load in sensitive data points in from config...")
-
-    #     try:
-    #         key_name   = config["QuickBooksGUIAPI.secrets"]["KEY_NAME"]
-    #         hash       = config["QuickBooksGUIAPI.secrets"]["HASH"]
-    #         salt       = config["QuickBooksGUIAPI.secrets"]["SALT"]
-    #         username   = config["QuickBooksGUIAPI.secrets"]["USERNAME"]
-    #         password   = config["QuickBooksGUIAPI.secrets"]["PASSWORD"]
-    #     except KeyError:
-    #         e = KeyError("KeyError raised when attempting to retrieve `QuickBooksGUIAPI.secrets`. There is a problem with the config file. If you have not already, use setup to set the encrypted secrets.")
-    #         self.logger.error(e)
-    #         raise e
-
-    #     import dotenv
-    #     dotenv.load_dotenv()
-
-    #     try:
-    #         key = os.getenv(key_name)
-    #     except KeyError:
-    #         e = KeyError(f"KeyError raised when attempting to the retrieve 'KEY_NAME' environmental variable, set as `{key_name}` in the config file.")
-    #         self.logger.error(e)
-    #         raise e
-        
-    #     confidential_data = [key, hash, salt, username, password]
-
-    #     if ("UNINITIALIZED" in confidential_data) or (None in confidential_data) or key is None:
-    #         error = ValueError("At lease one of the confidential references is `UNINITIALIZED` or `None`.")
-    #         self.logger.error(error)
-    #         raise error
-
-    #     em = EncryptionManager()
-
-    
-    #     if em.hash(key,salt) != hash:
-    #         error = ValueError(f"The `HASH` value pulled from the config file is not a hash of the `{key_name}` environmental variable.")
-    #         self.logger.error(error)
-    #         raise error
-
-    #     else:
-    #         self.logger.debug("Stored hash matches that of the environment key, proceeding with decryption...")
-    #         fer_key = em.derive_key(key,salt)
-
-    #         return em.decrypt(username,fer_key), em.decrypt(password,fer_key)
         
     def _start_quickbooks(self) -> bool:
         self.logger.debug("Starting QuickBooks if not already running...")
