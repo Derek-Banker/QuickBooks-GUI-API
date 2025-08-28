@@ -28,6 +28,7 @@ COMPANY_FILE_WINDOW:    Element = Element("Window",     "No QuickBooks Company L
 USERNAME_FIELD:         Element = Element("Edit",       None,                               15922)
 PASSWORD_FIELD:         Element = Element("Edit",       None,                               15924)
 MULTI_USER_FILE:        Element = Element("Window",     "QuickBooks Desktop Information",   None)
+SERVICE_UPDATE:         Element = Element("Window",     "QuickBooks Update Service",        None)
 
 QUICKBOOKS_PROCESSES:   list[str] = [
                                      "QBW.EXE", 
@@ -173,6 +174,10 @@ class QuickBookGUIAPI:
             focus()
             self.window_manager.send_input(keys=['alt', 'n'])
 
+        if top_dialog_title == SERVICE_UPDATE.title:
+            focus()
+            self.window_manager.send_input(keys=['enter'])
+
 
     def _terminate_processes(self, processes: list[str]) -> None:
         for process in processes:
@@ -199,6 +204,8 @@ class QuickBookGUIAPI:
         app, window = self._connect_to_app()
 
         window.set_focus()
+
+        self._handle_popups()
 
         main_window_spec = app.window(title_re=".*QuickBooks Enterprise Solutions.*")
         try:
