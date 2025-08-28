@@ -102,7 +102,24 @@ class QuickBookGUIAPI:
             return True
 
 
+    def _handle_startup_popups(self, app: Application) -> None:
+        dialog_titles = self.window_manager.get_all_dialog_titles(app)
+        
+        if SERVICE_UPDATE.title in dialog_titles:
+            self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",SERVICE_UPDATE.title)
+            self.window_manager.send_input('enter')
 
+    def _focus_popup(self, title: str):
+        self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",title)
+        unwanted_dialog = self.window.child_window(control_type= "Window", title = title)
+        unwanted_dialog.set_focus()
+
+    def _handle_running_popups(self):
+        top_dialog_title = self.window_manager.top_dialog(self.app)
+
+        if top_dialog_title == MULTI_USER_FILE.title:
+            self._focus_popup(top_dialog_title)
+            self.window_manager.send_input(keys=['alt', 'n'])
 
     def _kill_avatax(self) -> None:
         self._terminate_processes(AVATAX_PROCESSES)
@@ -159,24 +176,8 @@ class QuickBookGUIAPI:
             
             self.window_manager.send_input("enter")
 
-            self._handle_popups()
+            self._handle_running_popups()
             time.sleep(self.login_delay)
-
-    def _handle_popups(self):
-        top_dialog_title = self.window_manager.top_dialog(self.app)
-
-        def focus():
-            self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
-            unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
-            unwanted_dialog.set_focus()    
-
-        if top_dialog_title == MULTI_USER_FILE.title:
-            focus()
-            self.window_manager.send_input(keys=['alt', 'n'])
-
-        if top_dialog_title == SERVICE_UPDATE.title:
-            focus()
-            self.window_manager.send_input(keys=['enter'])
 
 
     def _terminate_processes(self, processes: list[str]) -> None:
@@ -205,7 +206,7 @@ class QuickBookGUIAPI:
 
         window.set_focus()
 
-        self._handle_popups()
+        self._handle_startup_popups(app)
 
         main_window_spec = app.window(title_re=".*QuickBooks Enterprise Solutions.*")
         try:
@@ -224,9 +225,9 @@ class QuickBookGUIAPI:
             # Update self.window and the local `window` to the spec we know works.
             self.window = window = main_window_spec
 
-        except (findwindows.ElementNotFoundError, timings.TimeoutError) as e:
+        except Exception as e:
             self.logger.error(f"Could not find or restore the main QuickBooks window: {e}")
-            raise RuntimeError("Failed to find main QuickBooks window after launch.") from e
+            raise e
 
         if self.string_manager.is_match_in_list(COMPANY_NOT_LOADED, self.window_manager.get_all_dialog_titles(app), 95.0):
            self._select_company_file(window)
