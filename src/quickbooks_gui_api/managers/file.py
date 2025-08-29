@@ -46,7 +46,7 @@ class FileManager:
             return True
         except Exception:
             # on any other unexpected error, assume locked for safety
-            self.logger.exception("Failed checking lock state for %s", path)
+            self.logger.exception(f"Failed checking lock state for {path}")
             return True
         
     def wait_for_file(
