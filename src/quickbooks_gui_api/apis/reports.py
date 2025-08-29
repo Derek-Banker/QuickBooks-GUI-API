@@ -289,7 +289,7 @@ class Reports:
                 self.logger.debug("The report file, `%s`, is stable.", save_path.name)
                 
                 if pre_existing_file:
-                    self.logger.warning("The file `%s` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...", save_path.name)
+                    self.logger.warning("The file `{save_path.name}` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...")
                     hashes_match = pre_existing_file_hash == self.file_manager.hash_file(save_path)
                     time_since_modified = self.file_manager.time_since_modified(save_path)    
         
