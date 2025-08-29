@@ -240,12 +240,12 @@ class WindowManager:
             for _ in range(send_count):
                 # Single string (e.g., "enter" or "a")
                 if isinstance(keys, str):
-                    self.logger.debug("Sending single key input: `%s`.", keys)
+                    self.logger.debug(f"Sending single key input: `{keys}`.")
                     pyautogui.press(keys)
                 # Flat list (e.g., ["ctrl", "a"])
                 elif isinstance(keys, list) and all(isinstance(k, str) for k in keys):
                     # Send all as a hotkey (simultaneous press)
-                    self.logger.debug("Sending key input as hotkey: `%s`.", keys)
+                    self.logger.debug(f"Sending key input as hotkey: `{keys}`.")
                     pyautogui.hotkey(*keys)
                 else:
                     raise ValueError("Invalid format for 'keys'. Must be str or List[str].")
@@ -258,13 +258,13 @@ class WindowManager:
         if string is not None:
             for _ in range(send_count):
                 if char_at_a_time:
-                    self.logger.debug("Sending string `%s` char at a time with a delay of `%f`.", string, delay)
+                    self.logger.debug(f"Sending string `{string}` char at a time with a delay of `{delay}`.")
                     for char in string:
                         pyautogui.typewrite(char)
                         if delay:
                             time.sleep(delay)
                 else:
-                    self.logger.debug("Sending string `%s` all at once a delay after of `%f`.", string, delay)
+                    self.logger.debug(f"Sending string `{string}` all at once a delay after of `{delay}`.")
                     pyautogui.typewrite(string)
                     if delay:
                         time.sleep(delay)

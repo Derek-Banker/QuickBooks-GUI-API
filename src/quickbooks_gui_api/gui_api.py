@@ -94,7 +94,7 @@ class QuickBookGUIAPI:
                 else:
                     return False
             except Exception as e:
-                error = "QuickBooks unable to be started. Error thrown: `%s`",e
+                error = f"QuickBooks unable to be started. Error thrown: `{e}`"
                 self.logger.error(error)
                 raise e
         else:
@@ -106,11 +106,11 @@ class QuickBookGUIAPI:
         dialog_titles = self.window_manager.get_all_dialog_titles(app)
         
         if SERVICE_UPDATE.title in dialog_titles:
-            self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",SERVICE_UPDATE.title)
+            self.logger.debug(f"Unwanted dialog detected. `{SERVICE_UPDATE.title}` Accommodating...")
             self.window_manager.send_input('enter')
 
     def _focus_popup(self, title: str):
-        self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",title)
+        self.logger.debug(f"Unwanted dialog detected. `{title}` Accommodating...")
         unwanted_dialog = self.window.child_window(control_type= "Window", title = title)
         unwanted_dialog.set_focus()
 

@@ -78,7 +78,7 @@ class Reports:
                 if path.is_file:
                     self.config_path = path
             else:
-                raise TypeError("Provided config path `%s` is not an instance of Path.", path)
+                raise TypeError(f"Provided config path `{path}` is not an instance of Path.")
 
         try:
             config = pytomlpp.load(self.config_path)["QuickBooksGUIAPI"]
@@ -101,16 +101,16 @@ class Reports:
         all_titles = self.window_manager.get_all_dialog_titles(self.app)
 
         if HAVE_ANY_QUESTIONS.title in all_titles:
-            self.logger.debug("Unwanted dialog detected. `%s` Closing...",HAVE_ANY_QUESTIONS.title)
+            self.logger.debug(f"Unwanted dialog detected. `{HAVE_ANY_QUESTIONS.title}` Closing...")
             HAVE_ANY_QUESTIONS.as_element(self.window).close()
 
         if NEW_FEATURE.title in all_titles:
-            self.logger.debug("Unwanted dialog detected. `%s` Closing...",NEW_FEATURE.title)
+            self.logger.debug(f"Unwanted dialog detected. `{NEW_FEATURE.title}` Closing...")
             NEW_FEATURE.as_element(self.window).set_focus()
             self.window_manager.send_input('enter')
 
         if QUICKBOOKS_PAYMENTS.title in all_titles:
-            self.logger.debug("Unwanted dialog detected. `%s` Closing...",QUICKBOOKS_PAYMENTS.title)
+            self.logger.debug(f"Unwanted dialog detected. `{QUICKBOOKS_PAYMENTS.title}` Closing...")
             QUICKBOOKS_PAYMENTS.as_element(self.window).set_focus()
             self.window_manager.send_input('esc')
 
@@ -121,9 +121,9 @@ class Reports:
             top_title = self.window_manager.top_dialog(self.app)
             try:
                 self.window.child_window(control_type = "Window", title = top_title).close()
-                self.logger.debug("Closed window `%s`. Attempt `%i`/`%i`.", top_title, i+1, self.HOME_TRIES)
+                self.logger.debug(f"Closed window `{top_title}`. Attempt `{i+1}`/`{self.HOME_TRIES}`.")
             except Exception:
-                self.logger.exception("Error attempting to close targeted window, `%s`",top_title)
+                self.logger.exception(f"Error attempting to close targeted window, `{top_title}`")
 
         def memorized_list_and_base(titles: list[str]) -> bool:
             base: bool = False
@@ -180,7 +180,7 @@ class Reports:
         else:
             queue = reports
             number_of_reports = len(queue)
-            self.logger.debug("List detected. Appended `%i` record to queue for processing.", number_of_reports)
+            self.logger.debug(f"List detected. Appended `{number_of_reports}` record to queue for processing.")
 
         self._handle_global_popups()
         self.home(True)
@@ -201,17 +201,19 @@ class Reports:
             report_name = queue[0].name
 
             if report_name in self.window_manager.get_all_dialog_titles(self.app):
-                self.logger.warning("The report `%s` is already open, calling home function to close everything...", report_name)
-                self.home(True) 
+                self.logger.warning(f"The report `{report_name}` is already open, calling home function to close everything...")
+                self.home(True)
             
             self.window_manager.send_input(string=report_name, char_at_a_time=True)
 
             self.window_manager.send_input(["alt","s"])
 
             if self.window_manager.top_dialog(self.app) == report_name:
-                self.logger.info("The intended report, `%s`, has been successfully opened.", report_name)
+                self.logger.info(f"The intended report, `{report_name}`, has been successfully opened.")
             else:
-                self.logger.info("The attempt to open, `%s`, has has failed. THe current top window is `%s`.", report_name,self.window_manager.top_dialog(self.app))
+                self.logger.info(
+                    f"The attempt to open, `{report_name}`, has has failed. THe current top window is `{self.window_manager.top_dialog(self.app)}`."
+                )
 
         def _save_as_new_worksheet():
             self.window.set_focus()
@@ -233,9 +235,9 @@ class Reports:
             top_dialog_title = self.window_manager.top_dialog(self.app)
 
             def focus():
-                self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
+                self.logger.debug(f"Unwanted dialog detected. `{top_dialog_title}` Accommodating...")
                 unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
-                unwanted_dialog.set_focus()    
+                unwanted_dialog.set_focus()
 
             if top_dialog_title == CONFIRM_SAVE_AS.title:
                 focus()
@@ -272,24 +274,24 @@ class Reports:
                 _handle_unwanted_dialog()
             
             if self.window_manager.is_element_active(AS_CSV_BUTTON.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
-                self.logger.debug("`%s` Button is detected and focused...",AS_CSV_BUTTON.title)
+                self.logger.debug(f"`{AS_CSV_BUTTON.title}` Button is detected and focused...")
                 _save_as_csv()
                 _handle_unwanted_dialog()
 
             if self.window_manager.is_element_active(FILE_NAME_FIELD.as_element(self.window), timeout=self.WINDOW_LOAD_DELAY):
-                self.logger.debug("`%s` Window is detected and focused...",SAVE_FILE_AS_WINDOW.title)
+                self.logger.debug(f"`{SAVE_FILE_AS_WINDOW.title}` Window is detected and focused...")
                 _save_file(save_path)
                 _handle_unwanted_dialog()
             else:
                 self.logger.error("NOT DETECTED")
 
             if self.file_manager.wait_for_file(save_path, self.MAX_REPORT_SAVE_TIME):
-                self.logger.debug("The report file, `%s`, exists.", save_path.name)
+                self.logger.debug(f"The report file, `{save_path.name}`, exists.")
                 self.file_manager.wait_till_stable(save_path, self.MAX_REPORT_SAVE_TIME)
-                self.logger.debug("The report file, `%s`, is stable.", save_path.name)
+                self.logger.debug(f"The report file, `{save_path.name}`, is stable.")
                 
                 if pre_existing_file:
-                    self.logger.warning("The file `{save_path.name}` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...")
+                    self.logger.warning(f"The file `{save_path.name}` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...")
                     hashes_match = pre_existing_file_hash == self.file_manager.hash_file(save_path)
                     time_since_modified = self.file_manager.time_since_modified(save_path)    
         

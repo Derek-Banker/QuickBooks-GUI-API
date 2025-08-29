@@ -47,18 +47,18 @@ class ProcessManager:
                 proc_exe  = info.get('exe', '')  or ''
 
                 if name and proc_name.lower() == name:
-                    self.logger.debug("Found process by name: %s", name)
+                    self.logger.debug(f"Found process by name: {name}")
                     return True
 
                 if path_str and proc_exe.lower() == path_str:
-                    self.logger.debug("Found process by path: %s", path_str)
+                    self.logger.debug(f"Found process by path: {path_str}")
                     return True
 
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 # that process disappeared or we can’t inspect it — skip it
                 continue
 
-        self.logger.debug("No matching process found (name=%s, path=%s)", name, path)
+        self.logger.debug(f"No matching process found (name={name}, path={path})")
         return False
 
     def start(self, path: Path | None) -> bool:
