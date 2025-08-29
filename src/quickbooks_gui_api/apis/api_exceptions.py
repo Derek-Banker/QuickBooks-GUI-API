@@ -7,7 +7,7 @@ class APIException(Exception):
 class ConfigFileNotFound(APIException):
     """The config file was not found."""
     def __init__(self, path) -> None:
-        super().__init__("Unable to find config file at the following path `%s`.", path)
+        super().__init__(f"Unable to find config file at the following path `{path}`.")
     pass
 
 class ExpectedWindowNotFound(APIException):

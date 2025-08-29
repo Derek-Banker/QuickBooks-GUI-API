@@ -31,7 +31,7 @@ class StringManager:
         
         for string in options:
             confidence = fuzz.ratio(string,target)
-            self.logger.debug("Comparing '%s' to '%s': Score = %f", string, target, confidence)
+            self.logger.debug(f"Comparing '{string}' to '{target}': Score = {confidence}")
             
             results.append((string,confidence))
             if (first_past_post and (confidence >= match_threshold)):

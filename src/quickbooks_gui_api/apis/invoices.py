@@ -78,7 +78,7 @@ class Invoices:
                 if path.is_file:
                     self.config_path = path
             else:
-                raise TypeError("Provided config path `%s` is not an instance of Path.", path)
+                raise TypeError(f"Provided config path `{path}` is not an instance of Path.")
 
         try:
             config = pytomlpp.load(self.config_path)["QuickBooksGUIAPI"]
@@ -109,9 +109,9 @@ class Invoices:
                 top_title = self.window_manager.top_dialog(self.app)
                 try:
                     self.window.child_window(control_type = "Window", title = top_title).close()
-                    self.logger.debug("Closed window `%s`. Attempt `%i`/`%i`.", top_title, i+1, self.HOME_TRIES)
+                    self.logger.debug(f"Closed window `{top_title}`. Attempt `{i+1}`/`{self.HOME_TRIES}`.")
                 except Exception:
-                    self.logger.exception("Error attempting to close targeted window, `%s`",top_title)
+                    self.logger.exception(f"Error attempting to close targeted window, `{top_title}`")
         
 
     def save(
@@ -130,7 +130,7 @@ class Invoices:
         else:
             queue = invoices
             number_of_invoices = len(queue)
-            self.logger.debug("List detected. Appended `%i` record to queue for processing.", number_of_invoices)
+            self.logger.debug(f"List detected. Appended `{number_of_invoices}` record to queue for processing.")
 
         self.home()
 
@@ -153,7 +153,7 @@ class Invoices:
                 remaining_attempts = 10
                 # loop until the field is active or attempts run out
                 while not self.window_manager.is_element_active(INVOICE_NUMBER_FIELD.as_element(self.window), timeout= 0.2, retry_interval=0.05, attempt_focus=True) and remaining_attempts > 0:
-                    self.logger.warning("Unable to initially focus on the invoice number field, reattempting. Attempts remaining `%i`.", remaining_attempts)
+                    self.logger.warning(f"Unable to initially focus on the invoice number field, reattempting. Attempts remaining `{remaining_attempts}`.")
                     self.window_manager.send_input('tab')
                     remaining_attempts -= 1
 
@@ -214,7 +214,7 @@ class Invoices:
             top_dialog_title = self.window_manager.top_dialog(self.app)
 
             def focus():
-                self.logger.debug("Unwanted dialog detected. `%s` Accommodating...",top_dialog_title)
+                self.logger.debug(f"Unwanted dialog detected. `{top_dialog_title}` Accommodating...")
                 unwanted_dialog = self.window.child_window(control_type= "Window", title = top_dialog_title)
                 unwanted_dialog.set_focus()    
 
@@ -245,7 +245,7 @@ class Invoices:
 
         loop_start = datetime.now()
         while len(queue) != 0:      
-            self.logger.info("Now saving invoice `%i`/`%i`...", ((number_of_invoices-len(queue)) + 1), number_of_invoices )
+            self.logger.info(f"Now saving invoice `{((number_of_invoices-len(queue)) + 1)}`/`{ number_of_invoices}`...")
             self.window.set_focus()
             
             save_path = queue[0].export_path() 
@@ -272,12 +272,12 @@ class Invoices:
 
             if self.file_manager.wait_for_file(save_path, self.MAX_INVOICE_SAVE_TIME):
                 time.sleep(0.15) # Annoyingly necessary delay. Break without it.
-                self.logger.debug("The report file, `%s`, exists.", save_path.name)
+                self.logger.debug(f"The report file, `{save_path.name}`, exists.")
                 self.file_manager.wait_till_stable(save_path, self.MAX_INVOICE_SAVE_TIME)
-                self.logger.debug("The report file, `%s`, is stable.", save_path.name)
+                self.logger.debug(f"The report file, `{save_path.name}`, is stable.")
                
                 if pre_existing_file:
-                    self.logger.warning("The file `%s` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...", save_path.name)
+                    self.logger.warning(f"The file `{save_path.name}` existed before the report was saved. Comparing the file hashes and inspecting 'last modified' time...")
                     hashes_match = pre_existing_file_hash == self.file_manager.hash_file(save_path)
                     time_since_modified = self.file_manager.time_since_modified(save_path)    
 

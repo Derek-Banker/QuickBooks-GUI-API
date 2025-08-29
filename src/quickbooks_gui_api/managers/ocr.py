@@ -38,10 +38,10 @@ class OCRManager:
         """
         try:
             text = pytesseract.image_to_string(image.img, config=config)
-            self.logger.debug("Extracted text: %s", text)
+            self.logger.debug(f"Extracted text: {text}")
             return text
         except Exception as e:
-            self.logger.error("OCR failed: %s", e)
+            self.logger.error(f"OCR failed: {e}")
             raise
     
     def get_multi_text(
